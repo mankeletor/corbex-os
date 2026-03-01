@@ -60,7 +60,7 @@ for pkg in "${PAQUETES[@]}"; do
     fi
 done
 
-# 3. Generar Indices de Apt con apt-ftparchive (Modelo Boris/Cisterna V6.2)
+# 3. Generar Indices de Apt con apt-ftparchive (Modelo Boris/Cisterna V9)
 echo "   Generando indices de Apt robustos con apt-ftparchive..."
 cd "$ISO_HOME"
 
@@ -68,12 +68,12 @@ cd "$ISO_HOME"
 apt-ftparchive packages pool/main > dists/excalibur/main/binary-amd64/Packages
 gzip -c dists/excalibur/main/binary-amd64/Packages > dists/excalibur/main/binary-amd64/Packages.gz
 
-# b. Generar metadatos para el instalador (vacio por compatibilidad)
+# b. Generar metadatos para el instalador
 touch dists/excalibur/main/debian-installer/binary-amd64/Packages
 gzip -c dists/excalibur/main/debian-installer/binary-amd64/Packages > dists/excalibur/main/debian-installer/binary-amd64/Packages.gz
 
-# c. Generar los archivos Release CRITICOS para debootstrap (V8)
-echo "   Generando archivos Release v8 (Seguro de Vida)..."
+# c. Generar los archivos Release CRITICOS para debootstrap (V9)
+echo "   Generando archivos Release v9..."
 cat > apt-release.conf << EOF
 APT::FTPArchive::Release::Origin "Devuan";
 APT::FTPArchive::Release::Label "Devuan";
@@ -84,7 +84,7 @@ APT::FTPArchive::Release::Components "main";
 APT::FTPArchive::Release::Description "ESFP Cordoba Local Repository";
 EOF
 
-# 1. Release del componente (Cisterna V8)
+# 1. Release del componente
 apt-ftparchive -c apt-release.conf release dists/excalibur/main/binary-amd64/ > dists/excalibur/main/binary-amd64/Release
 
 # 2. Release principal de la suite
@@ -92,8 +92,13 @@ apt-ftparchive -c apt-release.conf release dists/excalibur/ > dists/excalibur/Re
 
 rm apt-release.conf
 
+# d. Integrar GPG Keyrings (V9)
+echo "   Inyectando llaves GPG para autenticacion local..."
+mkdir -p "$ISO_HOME/etc/apt/trusted.gpg.d"
+cp /usr/share/keyrings/*.gpg "$ISO_HOME/etc/apt/trusted.gpg.d/" 2>/dev/null
+
 # Limpiar temporales
 rm -rf "$EXTRACT_DIR"
 cd "$WORKDIR"
 
-echo "✅ Repositorio local Apt configurado (V6.2 robusto)"
+echo "✅ Repositorio local Apt configurado (V9 robusto con GPG)"
