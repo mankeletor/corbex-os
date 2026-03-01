@@ -93,13 +93,8 @@ apt-ftparchive -c apt-release.conf release dists/excalibur/ > dists/excalibur/Re
 
 rm apt-release.conf
 
-# d. Integrar GPG Keyrings (V10)
-echo "   Inyectando llaves GPG del sistema..."
-mkdir -p "$ISO_HOME/etc/apt/trusted.gpg.d"
-cp /usr/share/keyrings/*.gpg "$ISO_HOME/etc/apt/trusted.gpg.d/" 2>/dev/null
-
 # Limpiar temporales
 rm -rf "$EXTRACT_DIR"
 cd "$WORKDIR"
 
-echo "✅ Repositorio local Apt configurado (Lógica Monolith V10)"
+echo "✅ Repositorio local Apt configurado (Lógica Monolith V11 KISS)"
