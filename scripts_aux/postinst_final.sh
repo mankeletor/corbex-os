@@ -208,12 +208,26 @@ FIRSTLOGIN
 chmod 644 /etc/profile.d/esfp-dconf-setup.sh
 
 # --------------------------
-# CONFIGURAR SUDO PARA ALUMNO
+# CONFIGURAR SUDO Y AUTOLOGIN PARA ALUMNO
 # --------------------------
 if [ -d /etc/sudoers.d ]; then
     echo "alumno ALL=(ALL) ALL" > /etc/sudoers.d/alumno
     chmod 440 /etc/sudoers.d/alumno
 fi
+
+echo "⚙️ Configurando Autologin para el usuario alumno..."
+# 1. Asegurar que el grupo existe y el usuario pertenece a él
+groupadd -r autologin 2>/dev/null || true
+usermod -aG autologin alumno
+
+# 2. Crear la configuración de LightDM de forma limpia
+mkdir -p /etc/lightdm/lightdm.conf.d
+cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf << EOF
+[Seat:*]
+autologin-user=alumno
+autologin-user-timeout=0
+EOF
+echo "✅ Autologin configurado."
 
 # Marcar la instalación
 echo "INSTALACIÓN ESFP-CÓRDOBA - $(date)" >> /etc/issue
