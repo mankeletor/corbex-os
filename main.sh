@@ -46,7 +46,12 @@ run_module "05_build_iso.sh"
 EXEC_END=$(date +%s)
 DURATION=$((EXEC_END - EXEC_START))
 
+# Conversión a h:mm:ss
+HOURS=$((DURATION / 3600))
+MINS=$(( (DURATION % 3600) / 60 ))
+SECS=$(( DURATION % 60 ))
+
 echo "================================================"
-echo "🎉 ¡PROCESO COMPLETADO EN $DURATION SEGUNDOS!"
+printf "🎉 ¡PROCESO COMPLETADO EN %02d:%02d:%02d!\n" $HOURS $MINS $SECS
 echo "📀 ISO lista en: $WORKDIR"
 echo "================================================"
