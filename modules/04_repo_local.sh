@@ -62,7 +62,8 @@ done
 # 3. Generar Índices de Apt
 echo "   Generando índices de Apt..."
 cd "$ISO_HOME"
-(cd pool && dpkg-scanpackages . /dev/null | gzip -9c > ../dists/excalibur/main/binary-amd64/Packages.gz)
+# Generar Packages.gz con rutas relativas a la raíz de la ISO (importante para APT)
+dpkg-scanpackages pool /dev/null | gzip -9c > dists/excalibur/main/binary-amd64/Packages.gz
 touch dists/excalibur/main/debian-installer/binary-amd64/Packages.gz
 
 # Limpiar temporales

@@ -186,20 +186,21 @@ orientation='top'
 size=24
 DCONF
 
-# ⚙️ Asegurar que dconf-cli está instalado ANTES de actualizar
-if ! command -v dconf &>/dev/null; then
-    echo "⚙️ Instalando dconf-cli para aplicar configuraciones..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y dconf-cli
+# ⚙️ Asegurar que dconf-cli y dbus-x11 están instalados ANTES de actualizar
+if ! command -v dconf &>/dev/null || ! command -v dbus-launch &>/dev/null; then
+    echo "⚙️ Instalando dconf-cli y dbus-x11 para aplicar configuraciones..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y dconf-cli dbus-x11
 fi
 
 # Aplicar los cambios a la base de datos binaria global
 if command -v dconf &>/dev/null; then
-    echo "⚙️ Ejecutando dconf update (Global DB)..."
-    dconf update || echo "⚠️ Falló dconf update"
+    echo "⚙️ Ejecutando dconf update (Global DB) con dbus-launch..."
+    # Usar dbus-launch para evitar errores de permisos en chroot
+    dbus-launch --exit-with-session dconf update || echo "⚠️ Falló dconf update"
     
     # También forzar compilación de esquemas si el comando existe
     if command -v glib-compile-schemas &>/dev/null; then
-        glib-compile-schemas /usr/share/glib-2.0/schemas/
+        dbus-launch --exit-with-session glib-compile-schemas /usr/share/glib-2.0/schemas/
     fi
 else
     echo "⚠️ Comando dconf no encontrado."
