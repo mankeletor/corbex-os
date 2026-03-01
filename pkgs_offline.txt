@@ -229,6 +229,9 @@ grub-pc-bin
 grub-efi-amd64
 grub-efi-amd64-bin
 grub2-common
+vlc
+vlc-plugin-base
+vlc-plugin-video-output
 gsettings-desktop-schemas
 gstreamer1.0-clutter-3.0
 gstreamer1.0-gl
