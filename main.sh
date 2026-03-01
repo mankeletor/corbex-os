@@ -2,7 +2,7 @@
 # main.sh - Orquestador ESFP Córdoba ISO Customizer
 # Licencia: GNU GPL v3
 # Filosofía: KISS / Modular
-VERSION="0.99rc2"
+VERSION="0.99rc3"
 
 # 1. Cargar Configuración
 if [ ! -f ./config.env ]; then
@@ -10,6 +10,14 @@ if [ ! -f ./config.env ]; then
     exit 1
 fi
 source ./config.env
+
+# Validar archivos de paquetes
+for f in "$PKGS_OFFLINE_FILE" "$PKGS_MANUAL_FILE"; do
+    if [ ! -f "$f" ]; then
+        echo "❌ Error: Archivo crítico no encontrado: $f"
+        exit 1
+    fi
+done
 
 echo "🚀 Iniciando proceso de customización $VERSION"
 echo "================================================"

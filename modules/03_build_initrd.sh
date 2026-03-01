@@ -6,24 +6,22 @@ echo "📦 [Módulo 03] Modificando Initrd e Inyectando archivos..."
 # Cargar configuración
 [ -z "$ISO_HOME" ] && source ./config.env
 
-# 1. Cargar paquetes desde pkgs.txt
-echo "   Cargando paquetes desde $PKGS_FILE..."
+# 1. Cargar paquetes desde pkgs_manual.txt (Cerebro)
+echo "   Cargando paquetes para instalación manual desde $PKGS_MANUAL_FILE..."
 PAQUETES=()
-if [ -f "$PKGS_FILE" ]; then
+if [ -f "$PKGS_MANUAL_FILE" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
-        if [[ -z "$line" || "$line" == Estado=* || "$line" == Err?=* || "$line" == Nombre ]]; then continue; fi
-        pkg=$(echo "$line" | awk '{ if ($1 ~ /^[a-z][a-z]$/) print $2; else print $1; }' | sed 's/:.*//')
-        [ -n "$pkg" ] && [[ ! "$pkg" =~ ^[./] ]] && PAQUETES+=("$pkg")
-    done < "$PKGS_FILE"
+        [ -z "$line" ] && continue
+        PAQUETES+=("$line")
+    done < "$PKGS_MANUAL_FILE"
 else
-    echo "⚠️ pkgs.txt no encontrado, usando lista mínima"
-    PAQUETES=(mate-desktop-environment-core mate-terminal network-manager firmware-linux-nonfree)
+    echo "❌ Error: $PKGS_MANUAL_FILE no encontrado."
+    exit 1
 fi
 
-# Añadir obligatorios y corregir faltantes reportados
-for critical in mate-menu mate-desktop-environment-extras mate-applets multiload-ng bash-completion sudo; do
+# Asegurar paquetes base críticos
+for critical in mate-desktop-environment-core mate-terminal network-manager firmware-linux-nonfree bash-completion sudo; do
     if [[ ! " ${PAQUETES[@]} " =~ " $critical " ]]; then
-        echo "   → Asegurando paquete crítico: $critical"
         PAQUETES+=("$critical")
     fi
 done
@@ -36,34 +34,34 @@ mkdir -p "$WORKDIR/temp_initrd"
 cd "$WORKDIR/temp_initrd"
 zcat "$local_initrd" | cpio -idmv > /dev/null 2>&1
 
-# 3. Inyectar archivos (desde templates y scripts_aux)
-echo "   Inyectando preseed.cfg, postinst_final.sh, rc.conf y pkgs.txt..."
+# 3. Inyectar archivos críticos
+echo "   Inyectando preseed, postinst, rc.conf y listas de paquetes..."
 cp "../../templates/preseed.cfg" ./preseed.cfg
 cp "../../scripts_aux/postinst_final.sh" ./postinst.sh
 cp "../../templates/rc.conf" ./rc.conf
-cp "../../pkgs.txt" ./pkgs.txt
+cp "../../pkgs_offline.txt" ./pkgs_offline.txt
+cp "../../pkgs_manual.txt" ./pkgs_manual.txt
 
 # --- NUEVO: Script de intervención radical (finish-install) ---
-echo "   Creando script de intervención radical /usr/lib/finish-install.d/99esfp-custom..."
+# Optimizado para RAM: solo lanza apt tras asegurar que el target tiene el repo local
+echo "   Configurando ejecución radical en finish-install..."
 mkdir -p usr/lib/finish-install.d
 cat > usr/lib/finish-install.d/99esfp-custom << 'EOF'
 #!/bin/sh
-# 99esfp-custom - Inyectado por ESFP Córdoba Modular v0.12.1
-# Asegura la instalación forzada de paquetes antes del primer booteo.
-echo "🔥 [Radical] Forzando instalación de paquetes desde pkgs.txt..."
-if [ -f /target/root/pkgs.txt ]; then
-    LISTA_PKGS=$(grep -vE "^(Estado|Err?|Nombre| |$)" /target/root/pkgs.txt | awk '{print $1}' | tr '\n' ' ')
-    chroot /target apt-get update -qq
-    chroot /target apt-get install -y --no-install-recommends $LISTA_PKGS
-else
-    echo "⚠️ /target/root/pkgs.txt no encontrado."
-fi
+# 99esfp-custom - Inyectado por ESFP Córdoba Modular
+echo "🔥 [Radical] Asegurando persistencia de scripts en /target..."
+cp /postinst.sh /target/root/postinst.sh
+cp /pkgs_offline.txt /target/root/pkgs_offline.txt
+cp /pkgs_manual.txt /target/root/pkgs_manual.txt
+chmod +x /target/root/postinst.sh
 EOF
 chmod +x usr/lib/finish-install.d/99esfp-custom
 
-# 4. Actualizar preseed con la lista de paquetes (Sincronizar para asegurar limpieza)
+# 4. Actualizar preseed con la lista "Cerebro" (PKGS_MANUAL)
 PKGS_STRING=$(echo "${PAQUETES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-sed -i "s/^d-i pkgsel\/include string .*/d-i pkgsel\/include string bash-completion sudo $PKGS_STRING/g" ./preseed.cfg
+sed -i "s/PKGSEL_INJECT_MARKER/d-i pkgsel\/include string $PKGS_STRING/g" ./preseed.cfg
+# Si no existe el marcador, usamos la línea estándar
+sed -i "s/^d-i pkgsel\/include string .*/d-i pkgsel\/include string $PKGS_STRING/g" ./preseed.cfg
 
 # 5. Reempaquetar
 echo "   Reempaquetando Initrd..."

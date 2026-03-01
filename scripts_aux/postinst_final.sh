@@ -10,27 +10,21 @@ locale-gen es_AR.UTF-8
 update-locale LANG=es_AR.UTF-8
 
 # --------------------------
-# FORZAR INSTALACIÓN DE PAQUETES (pkgs.txt)
+# FORZAR INSTALACIÓN DE PAQUETES (Cerebro + Cisterna)
 # --------------------------
-if [ -f /root/pkgs.txt ]; then
-    echo "📋 Detectado pkgs.txt. Extrayendo nombres de paquetes..."
-    # Extraer nombres limpiamente (ignorando cabeceras y líneas vacías)
-    LISTA_PKGS=$(grep -vE "^(Estado|Err?|Nombre| |$)" /root/pkgs.txt | awk '{print $1}' | tr '\n' ' ')
+if [ -f /root/pkgs_manual.txt ]; then
+    echo "📋 Procesando pkgs_manual.txt para asegurar instalación..."
+    LISTA_PKGS=$(cat /root/pkgs_manual.txt | tr '\n' ' ')
     
-    echo "⚙️ Forzando instalación de paquetes solicitados..."
-    # Actualizar lista de paquetes local (por si acaso)
+    echo "⚙️ Ejecutando apt-get install para lista manual..."
     apt-get update -qq
-    
-    # Intentar instalar todo de una vez (sin recomendados para mantenerlo liviano)
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $LISTA_PKGS || echo "⚠️ Algunos paquetes no se pudieron instalar."
-else
-    echo "⚠️ /root/pkgs.txt no encontrado. Saltando forzado de paquetes."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $LISTA_PKGS || echo "⚠️ Algunos paquetes fallaron, se reintentará en el primer arranque."
 fi
 
 # Reducir swappiness
 echo "vm.swappiness=10" >> /etc/sysctl.conf
 
-# Desactivar servicios innecesarios
+# Desactivar servicios innecesarios (Optimización RAM 4GB)
 SERVICIOS_INNECESARIOS="cups bluetooth whoopsie avahi-daemon speech-dispatcher ModemManager"
 for servicio in $SERVICIOS_INNECESARIOS; do
     if [ -f /etc/init.d/$servicio ]; then
@@ -224,14 +218,15 @@ echo "⚙️ Configurando Autologin para el usuario alumno..."
 groupadd -r autologin 2>/dev/null || true
 usermod -aG autologin alumno
 
-# 2. Crear la configuración de LightDM de forma limpia
+# 2. Crear la configuración de LightDM (Autologin)
 mkdir -p /etc/lightdm/lightdm.conf.d
 cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf << EOF
 [Seat:*]
 autologin-user=alumno
 autologin-user-timeout=0
+autologin-session=mate
 EOF
-echo "✅ Autologin configurado."
+echo "✅ Autologin configurado para usuario alumno."
 
 # --------------------------
 # LIMPIEZA AGRESIVA FINAL
