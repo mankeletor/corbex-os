@@ -11,12 +11,13 @@ echo "   Limpiando $WORKDIR..."
 rm -rf "$WORKDIR" 2>/dev/null
 mkdir -p "$ISO_HOME"
 
-# Montar y copiar
-echo "   Montando y copiando archivos de la ISO (esto puede tardar)..."
-sudo mkdir -p /mnt/original_iso
-sudo mount -o loop "$ISO_ORIGINAL" /mnt/original_iso
-rsync -a /mnt/original_iso/ "$ISO_HOME/"
-sudo umount /mnt/original_iso
-sudo rmdir /mnt/original_iso
+# Extracción usando xorriso (no requiere sudo mount)
+echo "   Extrayendo archivos de la ISO con xorriso..."
+xorriso -osirrox on -indev "$ISO_ORIGINAL" -extract / "$ISO_HOME"
 
-echo "✅ ISO extraída en $ISO_HOME"
+if [ $? -ne 0 ] || [ ! -d "$ISO_HOME/boot" ]; then
+    echo "❌ Error fatal: La extracción de la ISO falló o está incompleta."
+    exit 1
+fi
+
+echo "✅ ISO extraída correctamente en $ISO_HOME"

@@ -20,9 +20,12 @@ else
     PAQUETES=(mate-desktop-environment-core mate-terminal network-manager firmware-linux-nonfree)
 fi
 
-# Añadir obligatorios
-for critical in code mate-menu mate-desktop-environment-extras mate-applets multiload-ng; do
-    [[ ! " ${PAQUETES[@]} " =~ " $critical " ]] && PAQUETES+=("$critical")
+# Añadir obligatorios y corregir faltantes reportados
+for critical in code mate-menu mate-desktop-environment-extras mate-applets multiload-ng bash-completion sudo; do
+    if [[ ! " ${PAQUETES[@]} " =~ " $critical " ]]; then
+        echo "   → Asegurando paquete crítico: $critical"
+        PAQUETES+=("$critical")
+    fi
 done
 
 # 2. Descomprimir Initrd

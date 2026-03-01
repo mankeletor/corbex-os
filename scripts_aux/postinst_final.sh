@@ -16,7 +16,8 @@ echo "vm.swappiness=10" >> /etc/sysctl.conf
 # PURGA DE TERMINALES X11 EXTRA (MATE Pure)
 # --------------------------
 echo "🗑️ Eliminando terminales innecesarias (xterm, uxterm)..."
-apt-get purge -y xterm uxterm 2>/dev/null || true
+# Usamos apt-get de forma que no bloquee el script si falla
+DEBIAN_FRONTEND=noninteractive apt-get purge -y xterm uxterm || true
 
 # Desactivar servicios innecesarios
 SERVICIOS_INNECESARIOS="cups bluetooth whoopsie avahi-daemon speech-dispatcher ModemManager"
@@ -235,23 +236,29 @@ autologin-user-timeout=0
 EOF
 echo "✅ Autologin configurado."
 
-# Aplicar los cambios a la base de datos de dconf ANTES de la limpieza
+# Aplicar los cambios a la base de datos de dconf
 if command -v dconf &>/dev/null; then
-    dconf update
-    echo "✅ dconf sistema-db actualizado"
-fi
-
-# Forzar la recarga de esquemas
-if command -v glib-compile-schemas &>/dev/null; then
-    glib-compile-schemas /usr/share/glib-2.0/schemas/
+    echo "⚙️ Ejecutando dconf update..."
+    dconf update || echo "⚠️ Falló dconf update"
+    
+    # También forzar compilación de esquemas si el comando existe
+    if command -v glib-compile-schemas &>/dev/null; then
+        glib-compile-schemas /usr/share/glib-2.0/schemas/
+    fi
+else
+    echo "⚠️ Comando dconf no encontrado. Asegúrate de instalar dconf-cli."
 fi
 
 # --------------------------
 # LIMPIEZA AGRESIVA FINAL
 # --------------------------
 echo "🧹 Limpiando residuos de instalación y paquetes huérfanos..."
-apt-get autoremove --purge -y
-apt-get clean -y
+DEBIAN_FRONTEND=noninteractive apt-get autoremove --purge -y || true
+DEBIAN_FRONTEND=noninteractive apt-get clean -y || true
+
+# Marcar la instalación
+echo "INSTALACIÓN ESFP-CÓRDOBA - $(date)" >> /etc/issue
+echo "✅ Sistema optimizado para ESFP Córdoba" >> /etc/motd
 
 echo "=== Optimización completada ==="
 exit 0
