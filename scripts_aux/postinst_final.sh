@@ -9,6 +9,24 @@ echo "es_AR.UTF-8 UTF-8" > /etc/locale.gen
 locale-gen es_AR.UTF-8
 update-locale LANG=es_AR.UTF-8
 
+# --------------------------
+# FORZAR INSTALACIÓN DE PAQUETES (pkgs.txt)
+# --------------------------
+if [ -f /root/pkgs.txt ]; then
+    echo "📋 Detectado pkgs.txt. Extrayendo nombres de paquetes..."
+    # Extraer nombres limpiamente (ignorando cabeceras y líneas vacías)
+    LISTA_PKGS=$(grep -vE "^(Estado|Err?|Nombre| |$)" /root/pkgs.txt | awk '{print $1}' | tr '\n' ' ')
+    
+    echo "⚙️ Forzando instalación de paquetes solicitados..."
+    # Actualizar lista de paquetes local (por si acaso)
+    apt-get update -qq
+    
+    # Intentar instalar todo de una vez (sin recomendados para mantenerlo liviano)
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $LISTA_PKGS || echo "⚠️ Algunos paquetes no se pudieron instalar."
+else
+    echo "⚠️ /root/pkgs.txt no encontrado. Saltando forzado de paquetes."
+fi
+
 # Reducir swappiness
 echo "vm.swappiness=10" >> /etc/sysctl.conf
 
@@ -236,9 +254,17 @@ autologin-user-timeout=0
 EOF
 echo "✅ Autologin configurado."
 
+# Asegurar que dconf-cli está instalado para aplicar cambios
+if ! command -v dconf &>/dev/null; then
+    echo "⚙️ Instalando dconf-cli para aplicar configuraciones..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y dconf-cli
+fi
+
 # Aplicar los cambios a la base de datos de dconf
 if command -v dconf &>/dev/null; then
     echo "⚙️ Ejecutando dconf update..."
+    # Re-compilar los archivos de dconf
+    mkdir -p /etc/dconf/db/local.d
     dconf update || echo "⚠️ Falló dconf update"
     
     # También forzar compilación de esquemas si el comando existe
@@ -246,7 +272,7 @@ if command -v dconf &>/dev/null; then
         glib-compile-schemas /usr/share/glib-2.0/schemas/
     fi
 else
-    echo "⚠️ Comando dconf no encontrado. Asegúrate de instalar dconf-cli."
+    echo "⚠️ Comando dconf no encontrado."
 fi
 
 # --------------------------

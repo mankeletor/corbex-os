@@ -37,10 +37,11 @@ cd "$WORKDIR/temp_initrd"
 zcat "$local_initrd" | cpio -idmv > /dev/null 2>&1
 
 # 3. Inyectar archivos (desde templates y scripts_aux)
-echo "   Inyectando preseed.cfg, postinst_final.sh y rc.conf..."
+echo "   Inyectando preseed.cfg, postinst_final.sh, rc.conf y pkgs.txt..."
 cp "../../templates/preseed.cfg" ./preseed.cfg
 cp "../../scripts_aux/postinst_final.sh" ./postinst.sh
 cp "../../templates/rc.conf" ./rc.conf
+cp "../../pkgs.txt" ./pkgs.txt
 
 # 4. Actualizar preseed con la lista de paquetes (Sincronizar para asegurar limpieza)
 PKGS_STRING=$(echo "${PAQUETES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')

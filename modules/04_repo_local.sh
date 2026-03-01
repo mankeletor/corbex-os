@@ -32,17 +32,19 @@ mkdir -p "$ISO_HOME/dists/excalibur/main/binary-amd64"
 mkdir -p "$ISO_HOME/dists/excalibur/main/debian-installer/binary-amd64"
 
 # 1. Extraer paquetes desde pool1.iso usando xorriso (evita sudo mount)
-echo "   Extrayendo paquetes solicitados desde Pool1 (esto puede tardar)..."
+echo "   Extrayendo paquetes solicitados desde Pool1..."
 EXTRACT_DIR="$WORKDIR/pool1_files"
+rm -rf "$EXTRACT_DIR" 2>/dev/null
 mkdir -p "$EXTRACT_DIR"
 
-# En lugar de extraer todo, buscamos los archivos en la ISO y los extraemos uno por uno
-# O mejor, extraemos el árbol de pool/main que es manejable
-xorriso -osirrox on -indev "$POOL1_ISO" -extract /pool/main "$EXTRACT_DIR"
+# Extraemos la raíz de pool para capturar cualquier estructura (pool/main, pool/DEVUAN/main, etc.)
+echo "   Ejecutando xorriso -extract /pool ..."
+xorriso -osirrox on -indev "$POOL1_ISO" -extract /pool "$EXTRACT_DIR"
 
-# Copiar solo lo que está en PAQUETES o todo lo extraído para asegurar integridad
-# Dado que queremos sistema MATE, copiaremos todo el main de pool1 si cabe, 
-# o filtramos agresivamente. Copiemos lo necesario.
+if [ $? -ne 0 ] || [ ! -d "$EXTRACT_DIR/pool" ]; then
+    echo "   ⚠️ Error en la extracción de Pool1. Verifique que el archivo existe y es legible."
+fi
+
 echo "   Filtrando y moviendo paquetes..."
 for pkg in "${PAQUETES[@]}"; do
     [ "$pkg" = "code" ] && continue
