@@ -20,7 +20,7 @@ xorriso -as mkisofs \
     "$ISO_HOME"
 
 if [ $? -eq 0 ]; then
-    echo "✅ ISO creada con éxito: $ISO_FILENAME (`du -sh $ISO_FILENAME | cut -f1`)" 
+    echo "✅ ISO creada con éxito: $ISO_FILENAME ($(du -sh "$WORKDIR/$ISO_FILENAME" | cut -f1))" 
     cd "$WORKDIR"
     md5sum "$ISO_FILENAME" > "${ISO_FILENAME}.md5"
     echo "✅ Suma MD5 generada"

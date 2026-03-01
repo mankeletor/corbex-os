@@ -39,9 +39,9 @@ cp "../../templates/preseed.cfg" ./preseed.cfg
 cp "../../scripts_aux/postinst_final.sh" ./postinst.sh
 cp "../../templates/rc.conf" ./rc.conf
 
-# 4. Actualizar preseed con    # Sincronizar paquetes en preseed (Reemplaza la línea completa para asegurar limpieza)
-    local PKGS_STRING=$(echo "${PAQUETES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-    sed -i "s/^d-i pkgsel\/include string .*/d-i pkgsel\/include string bash-completion sudo $PKGS_STRING/g" ./preseed.cfg
+# 4. Actualizar preseed con la lista de paquetes (Sincronizar para asegurar limpieza)
+PKGS_STRING=$(echo "${PAQUETES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+sed -i "s/^d-i pkgsel\/include string .*/d-i pkgsel\/include string bash-completion sudo $PKGS_STRING/g" ./preseed.cfg
 
 # 5. Reempaquetar
 echo "   Reempaquetando Initrd..."
