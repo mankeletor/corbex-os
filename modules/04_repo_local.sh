@@ -72,8 +72,8 @@ gzip -c dists/excalibur/main/binary-amd64/Packages > dists/excalibur/main/binary
 touch dists/excalibur/main/debian-installer/binary-amd64/Packages
 gzip -c dists/excalibur/main/debian-installer/binary-amd64/Packages > dists/excalibur/main/debian-installer/binary-amd64/Packages.gz
 
-# c. Generar los archivos Release CRITICOS para debootstrap (V7)
-echo "   Generando archivos Release v7..."
+# c. Generar los archivos Release CRITICOS para debootstrap (V8)
+echo "   Generando archivos Release v8 (Seguro de Vida)..."
 cat > apt-release.conf << EOF
 APT::FTPArchive::Release::Origin "Devuan";
 APT::FTPArchive::Release::Label "Devuan";
@@ -84,10 +84,11 @@ APT::FTPArchive::Release::Components "main";
 APT::FTPArchive::Release::Description "ESFP Cordoba Local Repository";
 EOF
 
-# Release principal (firmado virtualmente por apt-ftparchive release)
-apt-ftparchive -c apt-release.conf release dists/excalibur/ > dists/excalibur/Release
-# Release de componente para asegurar que debootstrap no se detenga
+# 1. Release del componente (Cisterna V8)
 apt-ftparchive -c apt-release.conf release dists/excalibur/main/binary-amd64/ > dists/excalibur/main/binary-amd64/Release
+
+# 2. Release principal de la suite
+apt-ftparchive -c apt-release.conf release dists/excalibur/ > dists/excalibur/Release
 
 rm apt-release.conf
 
