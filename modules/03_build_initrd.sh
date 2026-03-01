@@ -21,7 +21,7 @@ else
 fi
 
 # Añadir obligatorios y corregir faltantes reportados
-for critical in code mate-menu mate-desktop-environment-extras mate-applets multiload-ng bash-completion sudo; do
+for critical in mate-menu mate-desktop-environment-extras mate-applets multiload-ng bash-completion sudo; do
     if [[ ! " ${PAQUETES[@]} " =~ " $critical " ]]; then
         echo "   → Asegurando paquete crítico: $critical"
         PAQUETES+=("$critical")

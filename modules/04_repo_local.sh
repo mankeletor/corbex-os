@@ -20,14 +20,14 @@ else
 fi
 
 # Añadir obligatorios y corregir faltantes reportados
-for critical in code mate-menu mate-desktop-environment-extras mate-applets multiload-ng bash-completion sudo; do
+for critical in mate-menu mate-desktop-environment-extras mate-applets multiload-ng bash-completion sudo; do
     if [[ ! " ${PAQUETES[@]} " =~ " $critical " ]]; then
         PAQUETES+=("$critical")
     fi
 done
 
 # Directorios del repositorio
-mkdir -p "$ISO_HOME/pool/main" "$ISO_HOME/pool/main/c/code"
+mkdir -p "$ISO_HOME/pool/main"
 mkdir -p "$ISO_HOME/dists/excalibur/main/binary-amd64"
 mkdir -p "$ISO_HOME/dists/excalibur/main/debian-installer/binary-amd64"
 
@@ -52,7 +52,6 @@ fi
 
 echo "   Filtrando y moviendo paquetes al repositorio local..."
 for pkg in "${PAQUETES[@]}"; do
-    [ "$pkg" = "code" ] && continue
     # Buscamos en el árbol extraído
     DEB=$(find "$EXTRACT_DIR" -name "${pkg}_*.deb" | head -1)
     if [ -n "$DEB" ]; then
@@ -61,12 +60,6 @@ for pkg in "${PAQUETES[@]}"; do
         echo "   ⚠️ $pkg no encontrado en Pool1"
     fi
 done
-
-# 2. Descargar VSCode
-if [[ " ${PAQUETES[@]} " =~ " code " ]]; then
-    echo "   → Descargando VSCode de Microsoft..."
-    wget -q -O "$ISO_HOME/pool/main/c/code/code_vscode.deb" "$VSCODE_URL" || echo "   ⚠️ Error descargando VSCode"
-fi
 
 # 3. Generar Índices de Apt
 echo "   Generando índices de Apt..."
