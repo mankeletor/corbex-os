@@ -59,12 +59,17 @@ for pkg in "${PAQUETES[@]}"; do
     fi
 done
 
-# 3. Generar Índices de Apt
-echo "   Generando índices de Apt..."
+# 3. Generar Índices de Apt con apt-ftparchive (Modelo Boris/Cisterna)
+echo "   Generando índices de Apt robustos con apt-ftparchive..."
 cd "$ISO_HOME"
-# Generar Packages.gz con rutas relativas a la raíz de la ISO (importante para APT)
-dpkg-scanpackages pool /dev/null | gzip -9c > dists/excalibur/main/binary-amd64/Packages.gz
-touch dists/excalibur/main/debian-installer/binary-amd64/Packages.gz
+# Crear el archivo Packages (sin comprimir) primero
+apt-ftparchive packages pool/main > dists/excalibur/main/binary-amd64/Packages
+# Generar la versión comprimida
+gzip -c dists/excalibur/main/binary-amd64/Packages > dists/excalibur/main/binary-amd64/Packages.gz
+
+# También para el instalador (udebs si los hubiera, o vacío por compatibilidad)
+touch dists/excalibur/main/debian-installer/binary-amd64/Packages
+gzip -c dists/excalibur/main/debian-installer/binary-amd64/Packages > dists/excalibur/main/debian-installer/binary-amd64/Packages.gz
 
 # Limpiar temporales
 rm -rf "$EXTRACT_DIR"
