@@ -59,9 +59,8 @@ chmod +x usr/lib/finish-install.d/99esfp-custom
 
 # 4. Actualizar preseed con la lista "Cerebro" (PKGS_MANUAL)
 PKGS_STRING=$(echo "${PAQUETES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-sed -i "s/PKGSEL_INJECT_MARKER/d-i pkgsel\/include string $PKGS_STRING/g" ./preseed.cfg
-# Si no existe el marcador, usamos la línea estándar
-sed -i "s/^d-i pkgsel\/include string .*/d-i pkgsel\/include string $PKGS_STRING/g" ./preseed.cfg
+echo "   Inyectando paquetes: $PKGS_STRING"
+sed -i "s/__PAQUETES__/$PKGS_STRING/g" ./preseed.cfg
 
 # 5. Reempaquetar
 echo "   Reempaquetando Initrd (Multi-threading: $THREADS)..."
