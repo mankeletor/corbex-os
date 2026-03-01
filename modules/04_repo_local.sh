@@ -1,7 +1,7 @@
 #!/bin/bash
 # modules/04_repo_local.sh
 
-echo "📦 [Módulo 04] Creando repositorio local (Pool1 + VSCode)..."
+echo "📦 [Módulo 04] Creando repositorio local Pool1..."
 
 # Cargar configuración
 [ -z "$ISO_HOME" ] && source ./config.env
