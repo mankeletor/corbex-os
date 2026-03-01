@@ -30,13 +30,6 @@ fi
 # Reducir swappiness
 echo "vm.swappiness=10" >> /etc/sysctl.conf
 
-# --------------------------
-# PURGA DE TERMINALES X11 EXTRA (MATE Pure)
-# --------------------------
-echo "🗑️ Eliminando terminales innecesarias (xterm, uxterm)..."
-# Usamos apt-get de forma que no bloquee el script si falla
-DEBIAN_FRONTEND=noninteractive apt-get purge -y xterm uxterm || true
-
 # Desactivar servicios innecesarios
 SERVICIOS_INNECESARIOS="cups bluetooth whoopsie avahi-daemon speech-dispatcher ModemManager"
 for servicio in $SERVICIOS_INNECESARIOS; do
@@ -111,39 +104,10 @@ visible-name='Default'
 
 [org/mate/desktop/peripherals/keyboard]
 numlock-state='on'
-DCONF
 
-# Aplicar los cambios a la base de datos de dconf
-if command -v dconf &>/dev/null; then
-    dconf update
-    echo "✅ dconf sistema-db actualizado"
-fi
-
-# Forzar la recarga de esquemas
-if command -v glib-compile-schemas &>/dev/null; then
-    glib-compile-schemas /usr/share/glib-2.0/schemas/
-fi
-
-# --------------------------
-# SCRIPT DE PRIMER LOGIN: aplica panel layout
-# --------------------------
-cat > /etc/profile.d/esfp-dconf-setup.sh << 'FIRSTLOGIN'
-#!/bin/bash
-# Aplica la configuración de panel MATE al usuario alumno en el primer login.
-
-MARKER="/home/alumno/.config/esfp-dconf-applied"
-[ -f "$MARKER" ] && return 0
-[ "$USER" != "alumno" ] && return 0
-
-# Esperar a que D-Bus esté disponible
-for i in $(seq 1 20); do
-    [ -n "$DBUS_SESSION_BUS_ADDRESS" ] && break
-    sleep 0.5
-done
-
-# Inyectar configuración del panel vía dconf load
-if command -v dconf &>/dev/null; then
-dconf load / << 'SETTINGS'
+# --------------------------------------------------
+# CONFIGURACIÓN DEL PANEL (MATE Layout ESFP)
+# --------------------------------------------------
 [org/mate/panel/general]
 object-id-list=['notification-area', 'clock', 'show-desktop', 'window-list', 'workspace-switcher', 'object-0', 'object-1']
 toplevel-id-list=['top', 'bottom']
@@ -218,19 +182,26 @@ size=24
 expand=true
 orientation='top'
 size=24
-SETTINGS
+DCONF
 
-# Reiniciar el panel para aplicar el nuevo layout
-mate-panel --replace &>/dev/null &
-
-# Marcar como aplicado
-mkdir -p /home/alumno/.config
-touch "$MARKER"
-chown alumno:alumno "$MARKER"
+# ⚙️ Asegurar que dconf-cli está instalado ANTES de actualizar
+if ! command -v dconf &>/dev/null; then
+    echo "⚙️ Instalando dconf-cli para aplicar configuraciones..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y dconf-cli
 fi
-FIRSTLOGIN
 
-chmod 644 /etc/profile.d/esfp-dconf-setup.sh
+# Aplicar los cambios a la base de datos binaria global
+if command -v dconf &>/dev/null; then
+    echo "⚙️ Ejecutando dconf update (Global DB)..."
+    dconf update || echo "⚠️ Falló dconf update"
+    
+    # También forzar compilación de esquemas si el comando existe
+    if command -v glib-compile-schemas &>/dev/null; then
+        glib-compile-schemas /usr/share/glib-2.0/schemas/
+    fi
+else
+    echo "⚠️ Comando dconf no encontrado."
+fi
 
 # --------------------------
 # CONFIGURAR SUDO Y AUTOLOGIN PARA ALUMNO
@@ -254,30 +225,12 @@ autologin-user-timeout=0
 EOF
 echo "✅ Autologin configurado."
 
-# Asegurar que dconf-cli está instalado para aplicar cambios
-if ! command -v dconf &>/dev/null; then
-    echo "⚙️ Instalando dconf-cli para aplicar configuraciones..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y dconf-cli
-fi
-
-# Aplicar los cambios a la base de datos de dconf
-if command -v dconf &>/dev/null; then
-    echo "⚙️ Ejecutando dconf update..."
-    # Re-compilar los archivos de dconf
-    mkdir -p /etc/dconf/db/local.d
-    dconf update || echo "⚠️ Falló dconf update"
-    
-    # También forzar compilación de esquemas si el comando existe
-    if command -v glib-compile-schemas &>/dev/null; then
-        glib-compile-schemas /usr/share/glib-2.0/schemas/
-    fi
-else
-    echo "⚠️ Comando dconf no encontrado."
-fi
-
 # --------------------------
 # LIMPIEZA AGRESIVA FINAL
 # --------------------------
+echo "🗑️ Purgando terminales extra (xterm, uxterm)..."
+DEBIAN_FRONTEND=noninteractive apt-get purge -y xterm uxterm || true
+
 echo "🧹 Limpiando residuos de instalación y paquetes huérfanos..."
 DEBIAN_FRONTEND=noninteractive apt-get autoremove --purge -y || true
 DEBIAN_FRONTEND=noninteractive apt-get clean -y || true

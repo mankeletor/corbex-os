@@ -1,6 +1,6 @@
 #!/bin/bash
 # main.sh - Orquestador ESFP Córdoba ISO Customizer
-# Versión: 0.12.0
+VERSION="0.12.1"
 # Filosofía: KISS / Modular
 
 # 1. Cargar Configuración
@@ -10,7 +10,7 @@ if [ ! -f ./config.env ]; then
 fi
 source ./config.env
 
-echo "🚀 Iniciando proceso de customización v0.12.0"
+echo "🚀 Iniciando proceso de customización $VERSION"
 echo "================================================"
 
 # 2. Ejecutar Módulos Secuencialmente

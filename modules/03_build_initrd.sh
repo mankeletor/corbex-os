@@ -43,6 +43,24 @@ cp "../../scripts_aux/postinst_final.sh" ./postinst.sh
 cp "../../templates/rc.conf" ./rc.conf
 cp "../../pkgs.txt" ./pkgs.txt
 
+# --- NUEVO: Script de intervención radical (finish-install) ---
+echo "   Creando script de intervención radical /usr/lib/finish-install.d/99esfp-custom..."
+mkdir -p usr/lib/finish-install.d
+cat > usr/lib/finish-install.d/99esfp-custom << 'EOF'
+#!/bin/sh
+# 99esfp-custom - Inyectado por ESFP Córdoba Modular v0.12.1
+# Asegura la instalación forzada de paquetes antes del primer booteo.
+echo "🔥 [Radical] Forzando instalación de paquetes desde pkgs.txt..."
+if [ -f /target/root/pkgs.txt ]; then
+    LISTA_PKGS=$(grep -vE "^(Estado|Err?|Nombre| |$)" /target/root/pkgs.txt | awk '{print $1}' | tr '\n' ' ')
+    chroot /target apt-get update -qq
+    chroot /target apt-get install -y --no-install-recommends $LISTA_PKGS
+else
+    echo "⚠️ /target/root/pkgs.txt no encontrado."
+fi
+EOF
+chmod +x usr/lib/finish-install.d/99esfp-custom
+
 # 4. Actualizar preseed con la lista de paquetes (Sincronizar para asegurar limpieza)
 PKGS_STRING=$(echo "${PAQUETES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
 sed -i "s/^d-i pkgsel\/include string .*/d-i pkgsel\/include string bash-completion sudo $PKGS_STRING/g" ./preseed.cfg

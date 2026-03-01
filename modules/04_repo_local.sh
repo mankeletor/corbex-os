@@ -37,15 +37,20 @@ EXTRACT_DIR="$WORKDIR/pool1_files"
 rm -rf "$EXTRACT_DIR" 2>/dev/null
 mkdir -p "$EXTRACT_DIR"
 
-# Extraemos la raíz de pool para capturar cualquier estructura (pool/main, pool/DEVUAN/main, etc.)
+# Extraemos los archivos de pool para capturar cualquier estructura (DEVUAN/main, DEBIAN/main, etc.)
 echo "   Ejecutando xorriso -extract /pool ..."
-xorriso -osirrox on -indev "$POOL1_ISO" -extract /pool "$EXTRACT_DIR"
+# Usamos stderr redireccionado suavemente para no saturar si hay advertencias menores
+xorriso -osirrox on -indev "$POOL1_ISO" -extract /pool "$EXTRACT_DIR" 2>/dev/null
 
-if [ $? -ne 0 ] || [ ! -d "$EXTRACT_DIR/pool" ]; then
-    echo "   ⚠️ Error en la extracción de Pool1. Verifique que el archivo existe y es legible."
+DEB_COUNT=$(find "$EXTRACT_DIR" -name "*.deb" 2>/dev/null | wc -l)
+if [ "$DEB_COUNT" -gt 0 ]; then
+    echo "   ✅ Extracción exitosa: $DEB_COUNT paquetes encontrados en el árbol de Pool1"
+else
+    echo "   ❌ Error: No se encontraron paquetes en Pool1. Verifique que $POOL1_ISO sea correcto."
+    # No detenemos el script aquí por si el usuario tiene internet, pero avisamos.
 fi
 
-echo "   Filtrando y moviendo paquetes..."
+echo "   Filtrando y moviendo paquetes al repositorio local..."
 for pkg in "${PAQUETES[@]}"; do
     [ "$pkg" = "code" ] && continue
     # Buscamos en el árbol extraído
