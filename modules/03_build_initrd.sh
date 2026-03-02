@@ -32,11 +32,15 @@ local_initrd="$ISO_HOME/boot/isolinux/initrd.gz"
 
 mkdir -p "$WORKDIR/temp_initrd"
 cd "$WORKDIR/temp_initrd"
-zcat "$local_initrd" | cpio -idmv > /dev/null 2>&1
+if ! zcat "$local_initrd" | cpio -idmv > /dev/null 2>&1; then
+    echo "❌ Error: No se pudo extraer el initrd. ¿Está corrupto el archivo?"
+    exit 1
+fi
+echo "   ✅ Initrd extraído correctamente"
 
 # 3. Inyectar archivos críticos
 echo "   Inyectando preseed, postinst, rc.conf y listas de paquetes..."
-cp "../../templates/preseed.cfg" ./preseed.cfg
+cp "../../preseed.cfg" ./preseed.cfg
 cp "../../scripts_aux/postinst_final.sh" ./postinst.sh
 cp "../../templates/rc.conf" ./rc.conf
 cp "../../pkgs_offline.txt" ./pkgs_offline.txt
