@@ -5,7 +5,11 @@ set -euo pipefail
 echo "📦 [Módulo 03] Modificando Initrd e Inyectando archivos..."
 
 # Cargar configuración
-[ -z "$ISO_HOME" ] && source ./config.env
+# Carga de configuración corregida
+if [ -z "$ISO_ORIGINAL" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    source "$SCRIPT_DIR/../config.env"
+fi
 
 # 1. Cargar paquetes desde pkgs_manual.txt (Cerebro)
 echo "   Cargando paquetes para instalación manual desde $PKGS_MANUAL_FILE..."

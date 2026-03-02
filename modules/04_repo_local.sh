@@ -6,7 +6,11 @@ set -euo pipefail
 echo "📦 [Modulo 04] Creando repositorio local (Lógica Monolith V10)..."
 
 # Cargar configuración
-[ -z "$ISO_HOME" ] && source ./config.env
+# Carga de configuración corregida
+if [ -z "$ISO_ORIGINAL" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    source "$SCRIPT_DIR/../config.env"
+fi
 
 # 0. Cargar paquetes desde pkgs_offline.txt (Cisterna)
 echo "   Cargando paquetes para el repositorio offline desde $PKGS_OFFLINE_FILE..."

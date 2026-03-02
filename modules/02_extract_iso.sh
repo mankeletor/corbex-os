@@ -5,7 +5,11 @@ set -euo pipefail
 echo "💿 [Módulo 02] Extrayendo ISO original..."
 
 # Cargar configuración if not loaded
-[ -z "$ISO_HOME" ] && source ./config.env
+# Carga de configuración corregida
+if [ -z "$ISO_ORIGINAL" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    source "$SCRIPT_DIR/../config.env"
+fi
 
 # Limpiar trabajo anterior
 echo "   Limpiando $WORKDIR..."

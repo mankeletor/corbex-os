@@ -12,6 +12,9 @@ if [ ! -f ./config.env ]; then
     exit 1
 fi
 source ./config.env
+set -a
+source ./config.env
+set +a
 
 # Validar archivos de paquetes
 for f in "$PKGS_OFFLINE_FILE" "$PKGS_MANUAL_FILE"; do

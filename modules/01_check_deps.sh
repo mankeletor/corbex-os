@@ -5,7 +5,11 @@ set -euo pipefail
 echo "📋 [Módulo 01] Verificando dependencias y rutas..."
 
 # Cargar configuración si no está cargada
-[ -z "$ISO_ORIGINAL" ] && source ./config.env
+# Carga de configuración corregida
+if [ -z "$ISO_ORIGINAL" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    source "$SCRIPT_DIR/../config.env"
+fi
 
 # 1. Verificar comandos necesarios
 for cmd in cpio gzip xorriso curl rsync wget awk sed dpkg-scanpackages apt-ftparchive; do

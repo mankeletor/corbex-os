@@ -5,7 +5,11 @@ set -euo pipefail
 echo "💿 [Módulo 05] Reconstruyendo ISO final con Xorriso..."
 
 # Cargar configuración
-[ -z "$ISO_HOME" ] && source ./config.env
+# Carga de configuración corregida
+if [ -z "$ISO_ORIGINAL" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    source "$SCRIPT_DIR/../config.env"
+fi
 
 # Nombre del archivo ISO final
 ISO_FILENAME="${ISO_PREFIX}-$(date +%Y%m%d_%H%M).iso"
