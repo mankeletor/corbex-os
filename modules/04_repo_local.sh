@@ -38,7 +38,18 @@ mkdir -p "$ISO_HOME/pool/main"
 mkdir -p "$ISO_HOME/dists/excalibur/main/binary-amd64"
 mkdir -p "$ISO_HOME/dists/excalibur/main/debian-installer/binary-amd64"
 
-# 1. Extraer paquetes desde pool1.iso usando xorriso
+# 1. Generar lista de paquetes BASE (Netinstall) para evitar duplicados
+echo "   Identificando paquetes base de la ISO Netinstall..."
+BASE_PKGS_FILE="$WORKDIR/base_packages.txt"
+if [ -f "$ISO_HOME/dists/excalibur/main/binary-amd64/Packages" ]; then
+    grep "^Package: " "$ISO_HOME/dists/excalibur/main/binary-amd64/Packages" | cut -d' ' -f2 | sort -u > "$BASE_PKGS_FILE"
+    echo "   ✅ Detectados $(wc -l < "$BASE_PKGS_FILE") paquetes en el sistema base."
+else
+    touch "$BASE_PKGS_FILE"
+    echo "   ⚠️ Advertencia: No se encontró índice de paquetes base."
+fi
+
+# 2. Extraer paquetes desde pool1.iso usando xorriso
 echo "   Extrayendo paquetes solicitados desde Pool1..."
 EXTRACT_DIR="$WORKDIR/pool1_files"
 rm -rf "$EXTRACT_DIR" 2>/dev/null
@@ -54,15 +65,24 @@ else
 fi
 
 echo "   Procesando paquetes (Multi-threading: $THREADS)..."
-export EXTRACT_DIR ISO_HOME THREADS
+export EXTRACT_DIR ISO_HOME THREADS BASE_PKGS_FILE
 process_pkg() {
     local pkg=$1
+    
+    # Prioridad 1: ¿Ya está en la base Netinstall?
+    if grep -q "^${pkg}$" "$BASE_PKGS_FILE"; then
+        # echo "   → $pkg ya es parte de la base, conservando original."
+        return 0
+    fi
+
+    # Prioridad 2: Buscar en Pool1 (extraído)
     local DEB=$(find "$EXTRACT_DIR" -name "${pkg}_*.deb" | head -1)
     if [ -n "$DEB" ]; then
         cp "$DEB" "$ISO_HOME/pool/main/" 2>/dev/null
     else
-        echo "   → $pkg no en Pool1, descargando..."
-        (cd "$ISO_HOME/pool/main/" && apt-get download "$pkg" -qq 2>/dev/null) || echo "   ❌ Error: $pkg"
+        # Prioridad 3: Descarga (si hay red)
+        # echo "   → $pkg no en Base ni Pool1, descargando..."
+        (cd "$ISO_HOME/pool/main/" && apt-get download "$pkg" -qq 2>/dev/null) || echo "   ❌ No se pudo obtener: $pkg"
     fi
 }
 export -f process_pkg
