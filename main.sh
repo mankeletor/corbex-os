@@ -4,7 +4,7 @@
 # Filosofía: KISS / Modular
 set -euo pipefail
 
-VERSION="0.99rc24"
+VERSION="0.99rc25"
 export BASE_DIR="$(pwd)"
 
 # 1. Cargar Configuración
@@ -16,6 +16,9 @@ source ./config.env
 set -a
 source ./config.env
 set +a
+
+# Asegurar directorio de logs
+mkdir -p "$WORKDIR/logs"
 
 # Validar archivos de paquetes
 for f in "$PKGS_OFFLINE_FILE" "$PKGS_MANUAL_FILE"; do
