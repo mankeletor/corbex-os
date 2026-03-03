@@ -16,8 +16,8 @@ ISO_FILENAME="${ISO_PREFIX}-$(date +%Y%m%d_%H%M).iso"
 
 # 1. Actualizar isolinux.cfg (Añadir entrada ESFP Córdoba sin destruir original)
 echo "   Actualizando isolinux.cfg para incluir preseed..."
-sed -i '$d' "$ISO_HOME/boot/isolinux/isolinux.cfg"
-head -4 $BASE_DIR/templates/isolinux.cfg >> "$ISO_HOME/boot/isolinux/isolinux.cfg"
+#sed -i '$d' "$ISO_HOME/boot/isolinux/isolinux.cfg"
+#head -4 $BASE_DIR/templates/isolinux.cfg >> "$ISO_HOME/boot/isolinux/isolinux.cfg"
 tail -4 $BASE_DIR/templates/isolinux.cfg >> "$ISO_HOME/boot/isolinux/isolinux.cfg"
 
 # 2. Construcción con Xorriso Híbrido Robusto (v0.99rc24)
