@@ -104,12 +104,12 @@ zcat dists/excalibur/local/binary-amd64/Packages.gz > dists/excalibur/local/bina
 echo "   Generando metadatos para el repositorio local..."
 cat > apt-local-release.conf << EOF
 APT::FTPArchive::Release::Origin "Devuan";
-APT::FTPArchive::Release::Label "ESFP Córdoba Local Repo";
+APT::FTPArchive::Release::Label "ESFP Cordoba Local Repo";
 APT::FTPArchive::Release::Suite "excalibur";
 APT::FTPArchive::Release::Codename "excalibur";
 APT::FTPArchive::Release::Architectures "amd64";
 APT::FTPArchive::Release::Components "local";
-APT::FTPArchive::Release::Description "Paquetes Complementarios ESFP Córdoba";
+APT::FTPArchive::Release::Description "Paquetes Complementarios ESFP Cordoba";
 EOF
 
 apt-ftparchive -c apt-local-release.conf release dists/excalibur/local/binary-amd64/ > dists/excalibur/local/binary-amd64/Release
