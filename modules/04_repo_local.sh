@@ -2,7 +2,6 @@
 # modules/04_repo_local.sh
 # Lógica Complementaria Robusta v0.99rc25
 set -euo pipefail
-set -o pipefail
 
 # Redirección de logs (Cerebro v0.99rc25)
 LOG_FILE="$WORKDIR/logs/04_repo_local.log"
