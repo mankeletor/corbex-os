@@ -16,6 +16,7 @@ ISO_FILENAME="${ISO_PREFIX}-$(date +%Y%m%d_%H%M).iso"
 
 # 1. Actualizar isolinux.cfg (Añadir entrada ESFP Córdoba sin destruir original)
 echo "   Actualizando isolinux.cfg para incluir preseed..."
+sed -i '$d' "$ISO_HOME/boot/isolinux/isolinux.cfg"
 cat >> "$ISO_HOME/boot/isolinux/isolinux.cfg" << EOF
 
 label esfp-cordoba
