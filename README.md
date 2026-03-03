@@ -104,4 +104,4 @@ sudo dd if=devuan-esfp-cordoba.iso of=/dev/sdX bs=4M status=progress && sync
 
 ---
 
-*Hecho para la educación técnica de Córdoba.*
+*Hecho desde la educación técnica de Córdoba para el mundo.*
