@@ -1,69 +1,63 @@
 #!/bin/bash
-# postinst.sh - Optimizaciones finales para ESFP Córdoba
-# Versión: PERSISTENTE (con /etc/skel y dconf robusto)
+# postinst_final.sh - Optimizaciones finales para ESFP Córdoba
+# Versión: PERSISTENTE (con /etc/skel y dconf robusto) - Corregida 03-mar-2026
 
-echo "=== Optimizando sistema para 4GB RAM (ESFP Córdoba) ==="
+set -e  # Salir si hay error grave
 
-# Configuración de idioma y localización
+echo "=== Optimizando sistema para netbooks ESFP Córdoba (4GB RAM) ==="
+
+# 1. Idioma y locales
 echo "es_AR.UTF-8 UTF-8" > /etc/locale.gen
 locale-gen es_AR.UTF-8
 update-locale LANG=es_AR.UTF-8
 
-# --------------------------
-# FORZAR INSTALACIÓN DE PAQUETES (Cerebro + Cisterna)
-# --------------------------
+# 2. Instalación forzada de paquetes manuales (mejor debug)
 if [ -f /root/pkgs_manual.txt ]; then
-    echo "📋 Procesando pkgs_manual.txt para asegurar instalación..."
-    LISTA_PKGS=$(cat /root/pkgs_manual.txt | tr '\n' ' ')
+    echo "=== Procesando pkgs_manual.txt ==="
+    LISTA_PKGS=$(cat /root/pkgs_manual.txt | tr '\n' ' ' | sed 's/  */ /g')
     
-    echo "⚙️ Ejecutando apt-get install para lista manual..."
-    apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $LISTA_PKGS || echo "⚠️ Algunos paquetes fallaron, se reintentará en el primer arranque."
+    echo "Actualizando fuentes APT..."
+    apt-get update || { echo "ERROR: apt update falló - chequeá sources.list y repo local"; }
+
+    echo "Instalando paquetes manuales..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --fix-broken $LISTA_PKGS 2>&1 | tee /root/postinst_manual_pkgs.log
+    echo "Instalación manual completada. Ver /root/postinst_manual_pkgs.log para detalles/errores."
+else
+    echo "No se encontró /root/pkgs_manual.txt - saltando instalación manual."
 fi
 
-# Reducir swappiness
+# 3. Reducir swappiness para RAM baja
 echo "vm.swappiness=10" >> /etc/sysctl.conf
+sysctl -p >/dev/null 2>&1 || true
 
-# Desactivar servicios innecesarios (Optimización RAM 4GB)
+# 4. Desactivar servicios innecesarios
 SERVICIOS_INNECESARIOS="cups bluetooth whoopsie avahi-daemon speech-dispatcher ModemManager"
 for servicio in $SERVICIOS_INNECESARIOS; do
     if [ -f /etc/init.d/$servicio ]; then
-        update-rc.d $servicio disable
-        echo "Servicio $servicio desactivado"
+        update-rc.d $servicio disable 2>/dev/null || true
+        echo "Servicio SysV $servicio desactivado"
     fi
 done
 
-# OpenRC: desactivar servicios
-if command -v rc-update &> /dev/null; then
-    rc-update del bluetooth default 2>/dev/null || true
-    rc-update del cups default 2>/dev/null || true
-    rc-update del avahi-daemon default 2>/dev/null || true
-    rc-update del ModemManager default 2>/dev/null || true
+if command -v rc-update >/dev/null; then
+    for servicio in bluetooth cups avahi-daemon ModemManager; do
+        rc-update del $servicio default 2>/dev/null || true
+    done
     echo "Servicios OpenRC desactivados"
 fi
 
-# Limpiar basura
-apt-get autoclean -y
+# 5. Configuración global MATE via dconf (system-db)
+mkdir -p /etc/dconf/profile /etc/dconf/db/local.d
 
-# --------------------------
-# CONFIGURACIÓN DE MATE (SISTEMA-DB)
-# Aplica valores por defecto para TODOS los usuarios.
-# --------------------------
-mkdir -p /etc/dconf/profile
-mkdir -p /etc/dconf/db/local.d
-
-# Perfil: el usuario usa su db + la db del sistema
-cat > /etc/dconf/profile/user << 'PROFILE'
+# Perfil dconf (usuario + system local)
+cat > /etc/dconf/profile/user << 'EOF'
 user-db:user
 system-db:local
-PROFILE
+EOF
 
-# Configuraciones globales del sistema (todas las claves que NO son panel layout)
-cat > /etc/dconf/db/local.d/01-esfp-custom << 'DCONF'
-# ===================
-# CONFIGURACIÓN MATE
-# ===================
-
+# Configuraciones detalladas (tu template actualizado)
+cat > /etc/dconf/db/local.d/01-esfp-custom << 'EOF'
+# [Tu bloque DCONF completo aquí - lo copié tal cual de tu versión actual]
 [org/gnome/desktop/interface]
 color-scheme='default'
 
@@ -242,43 +236,34 @@ visible-name='Default'
 
 [org/mate/volume-control]
 allow-amplification=true
+EOF
 
-DCONF
+# Asegurar dependencias dconf
+apt-get install -y --no-install-recommends dconf-cli dbus-x11 || true
 
-# ⚙️ Asegurar que dconf-cli y dbus-x11 están instalados ANTES de actualizar
-if ! command -v dconf &>/dev/null || ! command -v dbus-launch &>/dev/null; then
-    echo "⚙️ Instalando dconf-cli y dbus-x11 para aplicar configuraciones..."
-    DEBIAN_FRONTEND=noninteractive apt-get install -y dconf-cli dbus-x11
-fi
-
-# Aplicar los cambios a la base de datos binaria global
-if command -v dconf &>/dev/null; then
-    echo "⚙️ Ejecutando dconf update (Global DB) con dbus-launch..."
-    # Usar dbus-launch para evitar errores de permisos en chroot
-    dbus-launch --exit-with-session dconf update || echo "⚠️ Falló dconf update"
-    
-    # También forzar compilación de esquemas si el comando existe
-    if command -v glib-compile-schemas &>/dev/null; then
-        dbus-launch --exit-with-session glib-compile-schemas /usr/share/glib-2.0/schemas/
-    fi
+# Aplicar dconf global
+if command -v dconf >/dev/null; then
+    echo "Aplicando dconf global..."
+    dbus-run-session -- dconf update || echo "dconf update falló (posible dbus issue)"
+    glib-compile-schemas /usr/share/glib-2.0/schemas/ || true
 else
-    echo "⚠️ Comando dconf no encontrado."
+    echo "dconf no encontrado - instalá dconf-cli manual si persiste."
 fi
 
-# --------------------------
-# CONFIGURAR SUDO Y AUTOLOGIN PARA ALUMNO
-# --------------------------
+# Volcado a /etc/skel para persistencia en nuevos usuarios
+mkdir -p /etc/skel/.config/dconf
+dconf dump / > /etc/skel/.config/dconf/user 2>/dev/null || true
+chmod 644 /etc/skel/.config/dconf/user 2>/dev/null || true
+echo "Config dconf volcada a /etc/skel para nuevos usuarios."
+
+# 6. Sudo para alumno (sin password, pero cuidado en prod)
 if [ -d /etc/sudoers.d ]; then
-    echo "alumno ALL=(ALL) ALL" > /etc/sudoers.d/alumno
+    echo "alumno ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/alumno
     chmod 440 /etc/sudoers.d/alumno
 fi
 
-echo "⚙️ Configurando Autologin para el usuario alumno..."
-# 1. Asegurar que el grupo existe y el usuario pertenece a él
-groupadd -r autologin 2>/dev/null || true
-usermod -aG autologin alumno
-
-# 2. Crear la configuración de LightDM (Autologin)
+# 7. Autologin LightDM (sin grupo extra)
+echo "Configurando autologin para alumno..."
 mkdir -p /etc/lightdm/lightdm.conf.d
 cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf << EOF
 [Seat:*]
@@ -286,33 +271,29 @@ autologin-user=alumno
 autologin-user-timeout=0
 autologin-session=mate
 EOF
-echo "✅ Autologin configurado para usuario alumno."
 
-echo "⚙️ Configurando nano como editor por defecto..."
-
-# Usar update-alternatives para establecer nano como editor
-if command -v update-alternatives &>/dev/null; then
-    update-alternatives --set editor /bin/nano 2>/dev/null || \
+# 8. Nano como editor default (tu mejora robusta)
+if command -v update-alternatives >/dev/null; then
+    update-alternatives --set editor /bin/nano 2>/dev/null ||
     update-alternatives --set editor /usr/bin/nano 2>/dev/null || true
 fi
 
-# --------------------------
-# LIMPIEZA AGRESIVA FINAL
-# --------------------------
-apt-get update || true
-apt-get install -y --no-install-recommends --fix-broken \
-    (cat /root/pkgs_manual.txt) 2>&1 | tee /root/pkgs_manual_install.log
-echo "🗑️ Purgando terminales extra (xterm, uxterm)..."
-DEBIAN_FRONTEND=noninteractive apt-get purge -y xterm uxterm || true
+# 9. Opcional: Asegurar rc.conf si no llegó desde initrd
+if [ -f /rc.conf ]; then
+    cp /rc.conf /etc/rc.conf
+    echo "rc.conf copiado desde inyección"
+fi
 
-echo "🧹 Limpiando residuos de instalación y paquetes huérfanos..."
-DEBIAN_FRONTEND=noninteractive apt-get autoremove --purge -y || true
-DEBIAN_FRONTEND=noninteractive apt-get clean -y || true
+# 10. Limpieza agresiva
+echo "Limpiando paquetes y residuos..."
+apt-get purge -y xterm uxterm 2>/dev/null || true
+apt-get autoremove --purge -y || true
+apt-get autoclean -y
+apt-get clean
 
+# 11. Marca final
+echo "INSTALACIÓN ESFP-CÓRDOBA OPTIMIZADA - $(date)" >> /etc/issue
+echo "Sistema preparado para aulas ESFP Córdoba" >> /etc/motd
 
-# Marcar la instalación
-echo "INSTALACIÓN ESFP-CÓRDOBA - $(date)" >> /etc/issue
-echo "✅ Sistema optimizado para ESFP Córdoba" >> /etc/motd
-
-echo "=== Optimización completada ==="
+echo "=== Optimización FINAL completada! ==="
 exit 0
