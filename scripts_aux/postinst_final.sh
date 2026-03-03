@@ -299,12 +299,16 @@ fi
 # --------------------------
 # LIMPIEZA AGRESIVA FINAL
 # --------------------------
+apt-get update || true
+apt-get install -y --no-install-recommends --fix-broken \
+    (cat /root/pkgs_manual.txt) 2>&1 | tee /root/pkgs_manual_install.log
 echo "🗑️ Purgando terminales extra (xterm, uxterm)..."
 DEBIAN_FRONTEND=noninteractive apt-get purge -y xterm uxterm || true
 
 echo "🧹 Limpiando residuos de instalación y paquetes huérfanos..."
 DEBIAN_FRONTEND=noninteractive apt-get autoremove --purge -y || true
 DEBIAN_FRONTEND=noninteractive apt-get clean -y || true
+
 
 # Marcar la instalación
 echo "INSTALACIÓN ESFP-CÓRDOBA - $(date)" >> /etc/issue
