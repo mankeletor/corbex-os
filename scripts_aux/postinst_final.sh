@@ -62,18 +62,18 @@ if [ -f /root/esfp.dconf ]; then
     # Asegurar que dconf-cli está disponible para la carga
     apt-get install -y --no-install-recommends dconf-cli dbus-x11 || true
     
-    # Crear base de datos local desde el template
-    mkdir -p /etc/dconf/db/local.d
-    dbus-run-session -- dconf load / < /root/esfp.dconf || echo "Error cargando esfp.dconf"
+    # Inyectar el archivo de configuración directamente en la base de datos local
+    cp /root/esfp.dconf /etc/dconf/db/local.d/01-esfp-custom
     
-    # Compilar esquemas
+    # Compilar esquemas y actualizar DB
     glib-compile-schemas /usr/share/glib-2.0/schemas/ || true
+    dconf update || echo "Error actualizando base de datos dconf"
 else
     echo "⚠️ Warning: /root/esfp.dconf no encontrado. Saltando dconf."
 fi
 
 # 5.1 Script de Primer Inicio (Firstrun)
-# Se ejecuta al primer login del usuario alumno
+# Se ejecuta al primer login del usuario alumno (vía /etc/profile.d)
 cat > /etc/profile.d/esfp-firstrun.sh << 'EOF'
 #!/bin/bash
 # esfp-firstrun.sh - Tareas de limpieza y ajuste en el primer inicio
@@ -83,10 +83,7 @@ MARKER="$HOME/.config/esfp-firstrun-done"
 if [ "$USER" = "alumno" ] && [ ! -f "$MARKER" ]; then
     echo "🚀 Iniciando tareas de primer inicio ESFP Córdoba..."
     
-    # Limpieza de paquetes huérfanos
-    sudo apt-get autoremove -y
-    
-    # Refrescar dconf para el usuario (asegura que el panel tome los cambios si hubo delays)
+    # Asegurar que dconf tome el perfil global
     if command -v dconf >/dev/null; then
         dconf update
     fi
@@ -99,25 +96,11 @@ fi
 EOF
 chmod 644 /etc/profile.d/esfp-firstrun.sh
 
-# Asegurar dependencias dconf
-apt-get install -y --no-install-recommends dconf-cli dbus-x11 || true
+# 6. Protección de paquetes de AUDIO (evita que el instalador los purgue)
+echo "Protegiendo paquetes de audio..."
+apt-mark manual pulseaudio pulseaudio-utils pipewire pipewire-bin pipewire-pulse wireplumber libcanberra-pulse 2>/dev/null || true
 
-# Aplicar dconf global
-if command -v dconf >/dev/null; then
-    echo "Aplicando dconf global..."
-    dbus-run-session -- dconf update || echo "dconf update falló (posible dbus issue)"
-    glib-compile-schemas /usr/share/glib-2.0/schemas/ || true
-else
-    echo "dconf no encontrado - instalá dconf-cli manual si persiste."
-fi
-
-# Volcado a /etc/skel para persistencia en nuevos usuarios
-mkdir -p /etc/skel/.config/dconf
-dconf dump / > /etc/skel/.config/dconf/user 2>/dev/null || true
-chmod 644 /etc/skel/.config/dconf/user 2>/dev/null || true
-echo "Config dconf volcada a /etc/skel para nuevos usuarios."
-
-# 6. Sudo para alumno (sin password, pero cuidado en prod)
+# 7. Sudo para alumno (sin password)
 if [ -d /etc/sudoers.d ]; then
     echo "alumno ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/alumno
     chmod 440 /etc/sudoers.d/alumno
