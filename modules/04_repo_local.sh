@@ -40,12 +40,17 @@ mkdir -p "$APT_SANDBOX/etc/apt/preferences.d"
 mkdir -p "$APT_SANDBOX/var/log/apt"
 
 cat > "$APT_SANDBOX/etc/apt/sources.list" << EOF
-deb [trusted=yes] http://deb.devuan.org/merged excalibur main contrib non-free
-deb [trusted=yes] http://deb.devuan.org/merged excalibur-updates main contrib non-free
-deb [trusted=yes] http://deb.devuan.org/merged excalibur-security main contrib non-free
-# Daedalus como fallback si es necesario, también con path /merged
-deb [trusted=yes] http://deb.devuan.org/merged daedalus main contrib non-free
+deb [trusted=yes] http://deb.devuan.org/merged excalibur main contrib non-free non-free-firmware
+deb [trusted=yes] http://deb.devuan.org/merged excalibur-updates main contrib non-free non-free-firmware
+deb [trusted=yes] http://deb.devuan.org/merged excalibur-security main contrib non-free non-free-firmware
+# Daedalus como fallback
+deb [trusted=yes] http://deb.devuan.org/merged daedalus main contrib non-free non-free-firmware
 EOF
+
+# Inyectar llaves GPG del host para evitar errores de validación
+mkdir -p "$APT_SANDBOX/etc/apt/trusted.gpg.d"
+[ -f /etc/apt/trusted.gpg ] && cp /etc/apt/trusted.gpg "$APT_SANDBOX/etc/apt/trusted.gpg" || true
+[ -d /etc/apt/trusted.gpg.d ] && cp -r /etc/apt/trusted.gpg.d/* "$APT_SANDBOX/etc/apt/trusted.gpg.d/" || true
 
 cat > "$APT_SANDBOX/apt.conf" << EOF
 Dir "$APT_SANDBOX";
@@ -53,11 +58,12 @@ Dir::State "$APT_SANDBOX/var/lib/apt";
 Dir::Cache "$APT_SANDBOX/var/cache/apt";
 Dir::Etc "$APT_SANDBOX/etc/apt";
 Dir::Log "$APT_SANDBOX/var/log/apt";
-# Configuraciones para Sandbox sin GPG
+# Configuraciones para Sandbox sin GPG (si fallan las llaves)
 Acquire::AllowInsecureRepositories "true";
 Acquire::AllowDowngradeToInsecureRepositories "true";
 Acquire::Check-Valid-Until "false";
 APT::Get::AllowUnauthenticated "true";
+Acquire::https::Verify-Peer "false";
 APT::Architecture "amd64";
 EOF
 
@@ -165,8 +171,8 @@ process_pkg() {
         else
             # 4. Descarga con Sandbox APT y Re-intento
             while [ "$count" -le "$retries" ]; do
-                # Descargar a cache primero
-                if (cd "$PKG_CACHE" && apt-get -c "$APT_SANDBOX/apt.conf" download "$pkg" -qq 2>/dev/null); then
+                # Descargar a cache primero con flags de ultra-compatibilidad
+                if (cd "$PKG_CACHE" && apt-get -c "$APT_SANDBOX/apt.conf" download "$pkg" -o APT::Get::AllowUnauthenticated=true -o Acquire::AllowInsecureRepositories=true -qq 2>/dev/null); then
                     local NEW_DEB=$(ls "$PKG_CACHE/${pkg}_"*.deb 2>/dev/null | head -n1 || true)
                     if [ -n "$NEW_DEB" ]; then
                         cp "$NEW_DEB" "$ISO_HOME/pool/local/"
@@ -188,7 +194,7 @@ printf "%s\n" "${PAQUETES[@]}" | xargs -I {} -P "$THREADS" bash -c 'process_pkg 
 # 4. Generar Índices Apt
 echo "   Generando índices de repositorio local..."
 cd "$ISO_HOME"
-dpkg-scanpackages -m pool/local /dev/null | sed "s|^Filename: \(.*\)$|Filename: ./\1|g" | gzip -9c > dists/excalibur/local/binary-amd64/Packages.gz
+dpkg-scanpackages -m pool/local /dev/null | gzip -9c > dists/excalibur/local/binary-amd64/Packages.gz
 zcat dists/excalibur/local/binary-amd64/Packages.gz > dists/excalibur/local/binary-amd64/Packages
 
 # Generar archivo Release con checksums MD5
@@ -204,8 +210,12 @@ Components: local
 Description: Paquetes Complementarios ESFP Córdoba
 
 MD5Sum:
-$(find "dists/excalibur/local/binary-amd64" -type f -name "Packages*" -printf "%P\n" | while read -r f; do
-    md5sum "dists/excalibur/local/binary-amd64/$f" | awk '{print "  " $1 " " $2}' | sed "s|dists/excalibur/local/binary-amd64/||"
+$(find "dists/excalibur/local/binary-amd64" -type f \( -name "Packages*" -o -name "Release" \) -printf "%P\n" | grep -v "^Release$" | while read -r f; do
+    printf " %s %16d %s\n" "$(md5sum "dists/excalibur/local/binary-amd64/$f" | cut -d' ' -f1)" "$(stat -c%s "dists/excalibur/local/binary-amd64/$f")" "$f"
+done)
+SHA256:
+$(find "dists/excalibur/local/binary-amd64" -type f \( -name "Packages*" -o -name "Release" \) -printf "%P\n" | grep -v "^Release$" | while read -r f; do
+    printf " %s %16d %s\n" "$(sha256sum "dists/excalibur/local/binary-amd64/$f" | cut -d' ' -f1)" "$(stat -c%s "dists/excalibur/local/binary-amd64/$f")" "$f"
 done)
 EOF
 
