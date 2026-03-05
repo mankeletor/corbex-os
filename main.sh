@@ -52,11 +52,7 @@ run_module "01_check_deps.sh"
 run_module "02_extract_iso.sh"
 
 # Orden de Dependencia Crítico: 04 antes que 03 (Sincrónico)
-run_module "04_repo_local.sh"
-run_module "03_build_initrd.sh"
-
-# 04_repo_local debe finalizar antes que 03_build_initrd
-run_module "04_repo_local.sh"
+run_module "04_repo_2.sh"
 run_module "03_build_initrd.sh"
 
 run_module "05_build_iso.sh"
