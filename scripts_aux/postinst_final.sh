@@ -56,188 +56,48 @@ user-db:user
 system-db:local
 EOF
 
-# Configuraciones detalladas (tu template actualizado)
-cat > /etc/dconf/db/local.d/01-esfp-custom << 'EOF'
-# [Tu bloque DCONF completo aquí - lo copié tal cual de tu versión actual]
-[org/gnome/desktop/interface]
-color-scheme='default'
+# Aplicar configuraciones desde el template inyectado
+if [ -f /root/esfp.dconf ]; then
+    echo "Aplicando configuración dconf desde template..."
+    # Asegurar que dconf-cli está disponible para la carga
+    apt-get install -y --no-install-recommends dconf-cli dbus-x11 || true
+    
+    # Crear base de datos local desde el template
+    mkdir -p /etc/dconf/db/local.d
+    dbus-run-session -- dconf load / < /root/esfp.dconf || echo "Error cargando esfp.dconf"
+    
+    # Compilar esquemas
+    glib-compile-schemas /usr/share/glib-2.0/schemas/ || true
+else
+    echo "⚠️ Warning: /root/esfp.dconf no encontrado. Saltando dconf."
+fi
 
-[org/gtk/settings/file-chooser]
-date-format='regular'
-location-mode='path-bar'
-show-hidden=false
-show-size-column=true
-show-type-column=true
-sidebar-width=169
-sort-column='name'
-sort-directories-first=true
-sort-order='ascending'
-type-format='category'
-window-position=(178, 179)
-window-size=(1081, 574)
+# 5.1 Script de Primer Inicio (Firstrun)
+# Se ejecuta al primer login del usuario alumno
+cat > /etc/profile.d/esfp-firstrun.sh << 'EOF'
+#!/bin/bash
+# esfp-firstrun.sh - Tareas de limpieza y ajuste en el primer inicio
+MARKER="$HOME/.config/esfp-firstrun-done"
 
-[org/mate/caja/window-state]
-geometry='800x550+0+25'
-maximized=false
-start-with-sidebar=true
-start-with-status-bar=true
-start-with-toolbar=true
-
-[org/mate/desktop/accessibility/keyboard]
-bouncekeys-beep-reject=true
-bouncekeys-delay=300
-bouncekeys-enable=false
-enable=false
-feature-state-change-beep=false
-mousekeys-accel-time=1200
-mousekeys-enable=false
-mousekeys-init-delay=160
-mousekeys-max-speed=750
-slowkeys-beep-accept=true
-slowkeys-beep-press=true
-slowkeys-beep-reject=false
-slowkeys-delay=300
-slowkeys-enable=false
-stickykeys-enable=false
-stickykeys-latch-to-lock=true
-stickykeys-modifier-beep=true
-stickykeys-two-key-off=true
-timeout=120
-timeout-enable=false
-togglekeys-enable=false
-
-[org/mate/desktop/background]
-color-shading-type='vertical-gradient'
-picture-filename='/usr/share/backgrounds/mate/nature/Aqua.jpg'
-picture-options='zoom'
-primary-color='rgb(88,145,188)'
-secondary-color='rgb(60,143,37)'
-
-[org/mate/desktop/peripherals/keyboard]
-numlock-state='off'
-
-[org/mate/desktop/session]
-session-start=1772520957
-
-[org/mate/desktop/sound]
-event-sounds=true
-theme-name='freedesktop'
-
-[org/mate/eom/ui]
-image-collection=false
-
-[org/mate/marco/general]
-num-workspaces=2
-theme='Menta'
-
-[org/mate/mate-menu/plugins/applications]
-last-active-tab=1
-
-[org/mate/panel/general]
-object-id-list=['notification-area', 'clock', 'show-desktop', 'window-list', 'workspace-switcher', 'object-1', 'object-0']
-toplevel-id-list=['top', 'bottom']
-
-[org/mate/panel/objects/clock]
-applet-iid='ClockAppletFactory::ClockApplet'
-locked=true
-object-type='applet'
-position=0
-relative-to-edge='end'
-toplevel-id='top'
-
-[org/mate/panel/objects/clock/prefs]
-custom-format=''
-format='24-hour'
-
-[org/mate/panel/objects/notification-area]
-applet-iid='NotificationAreaAppletFactory::NotificationArea'
-locked=true
-object-type='applet'
-position=10
-relative-to-edge='end'
-toplevel-id='top'
-
-[org/mate/panel/objects/object-0]
-applet-iid='MateMenuAppletFactory::MateMenuApplet'
-object-type='applet'
-position=0
-toplevel-id='top'
-
-[org/mate/panel/objects/object-1]
-applet-iid='MultiLoadAppletFactory::MultiLoadApplet'
-object-type='applet'
-position=147
-relative-to-edge='end'
-toplevel-id='top'
-
-[org/mate/panel/objects/object-1/prefs]
-view-memload=true
-view-netload=true
-
-[org/mate/panel/objects/show-desktop]
-applet-iid='WnckletFactory::ShowDesktopApplet'
-locked=true
-object-type='applet'
-position=0
-toplevel-id='bottom'
-
-[org/mate/panel/objects/window-list]
-applet-iid='WnckletFactory::WindowListApplet'
-locked=true
-object-type='applet'
-position=20
-toplevel-id='bottom'
-
-[org/mate/panel/objects/workspace-switcher]
-applet-iid='WnckletFactory::WorkspaceSwitcherApplet'
-locked=true
-object-type='applet'
-position=0
-relative-to-edge='end'
-toplevel-id='bottom'
-
-[org/mate/panel/toplevels/bottom]
-expand=true
-orientation='bottom'
-screen=0
-size=24
-y=826
-y-bottom=0
-
-[org/mate/panel/toplevels/top]
-expand=true
-orientation='top'
-screen=0
-size=24
-
-[org/mate/sound]
-allow-amplification=true
-
-[org/mate/system-monitor]
-current-tab=3
-maximized=false
-window-state=(935, 528, 50, 50)
-
-[org/mate/system-monitor/disktreenew]
-col-7-width=300
-
-[org/mate/system-monitor/proctree]
-col-26-width=133
-
-[org/mate/terminal/profiles/default]
-allow-bold=false
-background-color='#000000000000'
-background-darkness=0.84724689165186506
-background-type='transparent'
-bold-color='#000000000000'
-foreground-color='#AAAAAAAAAAAA'
-palette='#2E2E34343636:#CCCC00000000:#4E4E9A9A0606:#C4C4A0A00000:#34346565A4A4:#757550507B7B:#060698209A9A:#D3D3D7D7CFCF:#555557575353:#EFEF29292929:#8A8AE2E23434:#FCFCE9E94F4F:#72729F9FCFCF:#ADAD7F7FA8A8:#3434E2E2E2E2:#EEEEEEEEECEC'
-use-theme-colors=false
-visible-name='Default'
-
-[org/mate/volume-control]
-allow-amplification=true
+# Solo ejecutar para el usuario alumno y una sola vez
+if [ "$USER" = "alumno" ] && [ ! -f "$MARKER" ]; then
+    echo "🚀 Iniciando tareas de primer inicio ESFP Córdoba..."
+    
+    # Limpieza de paquetes huérfanos
+    sudo apt-get autoremove -y
+    
+    # Refrescar dconf para el usuario (asegura que el panel tome los cambios si hubo delays)
+    if command -v dconf >/dev/null; then
+        dconf update
+    fi
+    
+    # Marcar como completado
+    mkdir -p "$(dirname "$MARKER")"
+    touch "$MARKER"
+    echo "✅ Tareas de primer inicio completadas."
+fi
 EOF
+chmod 644 /etc/profile.d/esfp-firstrun.sh
 
 # Asegurar dependencias dconf
 apt-get install -y --no-install-recommends dconf-cli dbus-x11 || true
