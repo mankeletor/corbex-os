@@ -5,14 +5,15 @@
 
 set -euo pipefail
 
-# Cargar configuración
-if [ -z "${BASE_DIR:-}" ]; then
-    BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-fi
+# ────────────────────────────────────────────────
+# Cargar configuración del proyecto
+# ────────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$BASE_DIR/config.env"
 
 # Variables del proyecto (definidas en config.env)
-: "${WORK_DIR:?Error: WORK_DIR no definido en config.env}"
+: "${WORKDIR:?Error: WORKDIR no definido en config.env}"
 : "${ISO_HOME:?Error: ISO_HOME no definido en config.env}"
 : "${POOL1_ISO:?Error: POOL1_ISO no definido en config.env}"
 : "${BASE_DIR:?}"
@@ -29,7 +30,7 @@ LISTA_MANUAL="${BASE_DIR}/pkgs_manual.txt"
 
 # Activar relleno dinámico (descarga online si falta paquete)
 FILL_MISSING="${FILL_MISSING:-true}"
-FILL_MIRROR="${FILL_MIRROR:-http://dev1mir.registrationsplus.net/devuan/merged}"
+FILL_MIRROR="${FILL_MIRROR:-http://deb.devuan.nz/devuan}"
 
 # ────────────────────────────────────────────────
 # Funciones auxiliares
@@ -61,42 +62,42 @@ check_commands
 # ────────────────────────────────────────────────
 # Paso 1: Preparar lista de paquetes manuales
 # ────────────────────────────────────────────────
-cp "$LISTA_MANUAL" "${WORK_DIR}/pkgs_manual_clean.txt"
-log "Paquetes manuales deseados: $(wc -l < "${WORK_DIR}/pkgs_manual_clean.txt")"
+cp "$LISTA_MANUAL" "${WORKDIR}/pkgs_manual_clean.txt"
+log "Paquetes manuales deseados: $(wc -l < "${WORKDIR}/pkgs_manual_clean.txt")"
 
 # ────────────────────────────────────────────────
 # Paso 2: Generar lista completa (manuales + dependencias)
 # ────────────────────────────────────────────────
 log "Calculando dependencias de los paquetes manuales..."
 
-APT_CONFIG_DIR="${WORK_DIR}/apt-temp"
+APT_CONFIG_DIR="${WORKDIR}/apt-temp"
 ensure_dir "$APT_CONFIG_DIR"
 ensure_dir "${APT_CONFIG_DIR}/lists/partial"
 cat > "${APT_CONFIG_DIR}/sources.list" << EOF
 deb $FILL_MIRROR $SUITE main contrib non-free non-free-firmware
 EOF
 
-> "${WORK_DIR}/pkgs_full.txt"
-> "${WORK_DIR}/pkgs_deps.txt"
+> "${WORKDIR}/pkgs_full.txt"
+> "${WORKDIR}/pkgs_deps.txt"
 
 while IFS= read -r pkg; do
-    echo "$pkg" >> "${WORK_DIR}/pkgs_full.txt"
+    echo "$pkg" >> "${WORKDIR}/pkgs_full.txt"
     apt-cache -c "${APT_CONFIG_DIR}/apt.conf" depends "$pkg" 2>/dev/null | \
-        grep '^  Depende: ' | awk '{print $2}' >> "${WORK_DIR}/pkgs_deps.txt" || true
-done < "${WORK_DIR}/pkgs_manual_clean.txt"
+        grep '^  Depende: ' | awk '{print $2}' >> "${WORKDIR}/pkgs_deps.txt" || true
+done < "${WORKDIR}/pkgs_manual_clean.txt"
 
-if [ -s "${WORK_DIR}/pkgs_deps.txt" ]; then
-    cat "${WORK_DIR}/pkgs_deps.txt" >> "${WORK_DIR}/pkgs_full.txt"
+if [ -s "${WORKDIR}/pkgs_deps.txt" ]; then
+    cat "${WORKDIR}/pkgs_deps.txt" >> "${WORKDIR}/pkgs_full.txt"
 fi
-sort -u "${WORK_DIR}/pkgs_full.txt" > "${WORK_DIR}/pkgs_to_include.txt"
-rm -f "${WORK_DIR}/pkgs_deps.txt"
+sort -u "${WORKDIR}/pkgs_full.txt" > "${WORKDIR}/pkgs_to_include.txt"
+rm -f "${WORKDIR}/pkgs_deps.txt"
 
-log "Lista completa (manuales + deps): $(wc -l < "${WORK_DIR}/pkgs_to_include.txt") paquetes"
+log "Lista completa (manuales + deps): $(wc -l < "${WORKDIR}/pkgs_to_include.txt") paquetes"
 
 # ────────────────────────────────────────────────
 # Paso 3: Extraer Pool1.iso
 # ────────────────────────────────────────────────
-EXTRACT_DIR="${WORK_DIR}/pool1_extract"
+EXTRACT_DIR="${WORKDIR}/pool1_extract"
 log "Extrayendo Pool1.iso a $EXTRACT_DIR..."
 rm -rf "$EXTRACT_DIR" 2>/dev/null
 ensure_dir "$EXTRACT_DIR"
@@ -109,7 +110,7 @@ xorriso -osirrox on -indev "$POOL1_ISO" -extract /pool "$EXTRACT_DIR" 2>/dev/nul
     error "Falló la extracción de $POOL1_ISO"
 }
 
-POOL1_INDEX="${WORK_DIR}/pool1_index.txt"
+POOL1_INDEX="${WORKDIR}/pool1_index.txt"
 find "$EXTRACT_DIR" -type f -name "*.deb" > "$POOL1_INDEX"
 log "Pool1 indexado con $(wc -l < "$POOL1_INDEX") paquetes."
 
@@ -121,11 +122,11 @@ copiados_local=0
 while IFS= read -r pkg; do
     deb_path=$(grep -m1 "/${pkg}_" "$POOL1_INDEX" || true)
     if [ -n "$deb_path" ] && [ -f "$deb_path" ]; then
-        if cp -v "$deb_path" "${POOL_LOCAL}/" 2>>"${WORK_DIR}/warnings.log"; then
+        if cp -v "$deb_path" "${POOL_LOCAL}/" 2>>"${WORKDIR}/warnings.log"; then
             ((copiados_local++))
         fi
     fi
-done < "${WORK_DIR}/pkgs_to_include.txt"
+done < "${WORKDIR}/pkgs_to_include.txt"
 log "Copiados desde Pool1: $copiados_local"
 
 # ────────────────────────────────────────────────
@@ -134,7 +135,7 @@ log "Copiados desde Pool1: $copiados_local"
 copiados_online=0
 if [ "$FILL_MISSING" = "true" ]; then
     log "Rellenando paquetes faltantes desde mirror online..."
-    DOWNLOAD_DIR="${WORK_DIR}/downloads_temp"
+    DOWNLOAD_DIR="${WORKDIR}/downloads_temp"
     ensure_dir "$DOWNLOAD_DIR"
 
     while IFS= read -r pkg; do
@@ -143,11 +144,11 @@ if [ "$FILL_MISSING" = "true" ]; then
             if apt-get download \
                 -c "${APT_CONFIG_DIR}/apt.conf" \
                 -o Dir::Cache::archives="$DOWNLOAD_DIR" \
-                "$pkg" 2>>"${WORK_DIR}/warnings.log"; then
+                "$pkg" 2>>"${WORKDIR}/warnings.log"; then
                 mv "$DOWNLOAD_DIR"/*.deb "${POOL_LOCAL}/" 2>/dev/null && ((copiados_online++))
             fi
         fi
-    done < "${WORK_DIR}/pkgs_to_include.txt"
+    done < "${WORKDIR}/pkgs_to_include.txt"
     rm -rf "$DOWNLOAD_DIR"
     log "Relleno completado: $copiados_online paquetes nuevos descargados"
 fi
