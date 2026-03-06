@@ -29,13 +29,17 @@ set +a
 # Asegurar directorio de logs
 mkdir -p "$WORKDIR/logs"
 
-# Validar archivos de paquetes
-for f in "$PKGS_OFFLINE_FILE" "$PKGS_MANUAL_FILE"; do
-    if [ ! -f "$f" ]; then
-        echo "❌ Error: Archivo crítico no encontrado: $f"
-        exit 1
-    fi
-done
+# --- REFACTOR DEL BLOQUE DE VALIDACIÓN EN main.sh ---
+
+# 1. Validar solo la semilla (Entrada obligatoria)
+if [ ! -f "$PKGS_MANUAL_FILE" ]; then
+    echo "❌ Error: No existe la semilla de paquetes: $PKGS_MANUAL_FILE"
+    echo "💡 Crealo con la lista de paquetes básicos que querés en la ISO."
+    exit 1
+fi
+
+# 2. El archivo offline NO se valida aquí porque lo genera el Módulo 04
+echo "✔ Semilla de paquetes detectada. El Cerebro generará la lista offline en el módulo 04."
 
 echo "🚀 Iniciando proceso de customización $VERSION"
 echo "================================================"
