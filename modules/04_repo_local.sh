@@ -55,11 +55,10 @@ mkdir -p "$APT_SANDBOX/etc/apt/preferences.d"
 mkdir -p "$APT_SANDBOX/var/log/apt"
 
 cat > "$APT_SANDBOX/etc/apt/sources.list" << EOF
-deb [trusted=yes] http://deb.devuan.org/merged excalibur main contrib non-free non-free-firmware
-deb [trusted=yes] http://deb.devuan.org/merged excalibur-updates main contrib non-free non-free-firmware
-deb [trusted=yes] http://deb.devuan.org/merged excalibur-security main contrib non-free non-free-firmware
-# Daedalus como fallback
-deb [trusted=yes] http://deb.devuan.org/merged daedalus main contrib non-free non-free-firmware
+# Mirror principal (Leaseweb NL - Uno de los más rápidos y estables según Veritas)
+deb [trusted=yes] http://mirror.leaseweb.com/devuan/merged excalibur main contrib non-free non-free-firmware
+deb [trusted=yes] http://mirror.leaseweb.com/devuan/merged excalibur-updates main contrib non-free non-free-firmware
+deb [trusted=yes] http://mirror.leaseweb.com/devuan/merged excalibur-security main contrib non-free non-free-firmware
 EOF
 
 # Inyectar llaves GPG del host para evitar errores de validación
@@ -104,19 +103,26 @@ fi
 
 # Inyección de paquetes CRÍTICOS (Declarativo)
 PAQUETES_CRITICOS=(
-    mate-menu 
-    mate-desktop-environment-extras 
-    mate-applets 
-    bash-completion 
-    sudo 
-    zlib1g 
-    libeudev1 
-    libc6 
-    libgcc-s1 
-    vlc 
+    sudo
+    bash-completion
+    libc6
+    libgcc-s1
+    libeudev1
+    mate-menu
+    mate-desktop-environment-extras
+    mate-applets
+    vlc
     vlc-plugin-base
+    chromium
     network-manager
+    wpasupplicant
+    wireless-tools
     firmware-linux-nonfree
+    intel-microcode
+    xserver-xorg-video-intel
+    va-driver-all
+    usb-modeswitch
+    task-laptop
 )
 PAQUETES_SEMILLA+=("${PAQUETES_CRITICOS[@]}")
 
@@ -131,6 +137,20 @@ if [ -z "$PAQUETES_LISTA_COMPLETA" ]; then
 else
     PAQUETES=($PAQUETES_LISTA_COMPLETA)
 fi
+# 0.2 Generación de pkgs_offline.txt (Refactorizado)
+echo "   Generando pkgs_offline.txt consolidado..."
+
+if [ -n "$PAQUETES_LISTA_COMPLETA" ]; then
+    # Volcamos la lista resuelta al archivo, un paquete por línea
+    echo "$PAQUETES_LISTA_COMPLETA" | tr ' ' '\n' | sort -u > $BASE_DIR/pkgs_offline.txt
+    echo "✅ pkgs_offline.txt actualizado con $(wc -l < $BASE_DIR/pkgs_offline.txt) paquetes (base + críticos + dependencias)."
+else
+    # Fallback: Si APT falló, al menos guardamos la semilla para no quedar en cero
+    echo "⚠️ Usando PAQUETES_SEMILLA como fallback para pkgs_offline.txt"
+    printf "%s\n" "${PAQUETES_SEMILLA[@]}" | sort -u > $BASE_DIR/pkgs_offline.txt
+fi
+
+sed -i '/^$/d' $BASE_DIR/pkgs_offline.txt
 
 echo "   ✅ Total de paquetes únicos a procesar (manual + dependencias): ${#PAQUETES[@]}"
 
