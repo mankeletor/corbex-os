@@ -140,7 +140,7 @@ fi
 
 # 9. Limpieza agresiva de paquetes y residuos
 echo "Limpiando paquetes y residuos..."
-apt-get purge -y xterm uxterm 2>/dev/null || true
+apt-get purge -y xterm 2>/dev/null || true
 apt-get autoremove --purge -y || true
 apt-get autoclean -y
 apt-get clean
