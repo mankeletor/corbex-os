@@ -152,7 +152,7 @@ fi
 
 sed -i '/^$/d' $BASE_DIR/pkgs_offline.txt
 
-echo "   ✅ Total de paquetes únicos a procesar (manual + dependencias): ${#PAQUETES[@]}"
+#echo "   ✅ Total de paquetes únicos a procesar (manual + dependencias): ${#PAQUETES[@]}"
 
 # Directorios
 mkdir -p "$ISO_HOME/pool/local"
