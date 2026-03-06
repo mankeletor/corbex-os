@@ -55,10 +55,23 @@ mkdir -p "$APT_SANDBOX/etc/apt/preferences.d"
 mkdir -p "$APT_SANDBOX/var/log/apt"
 
 cat > "$APT_SANDBOX/etc/apt/sources.list" << EOF
-# Mirror principal (Leaseweb NL - Uno de los más rápidos y estables según Veritas)
-deb [trusted=yes] http://mirror.leaseweb.com/devuan/merged excalibur main contrib non-free non-free-firmware
-deb [trusted=yes] http://mirror.leaseweb.com/devuan/merged excalibur-updates main contrib non-free non-free-firmware
-deb [trusted=yes] http://mirror.leaseweb.com/devuan/merged excalibur-security main contrib non-free non-free-firmware
+# Repositorios oficiales de Devuan Excalibur
+# Basado en la red de mirrors verificada por apt-panopticon.devuan.org
+
+# Mirror principal en Argentina (excelente rendimiento local)
+deb http://dev1mir.registrationsplus.net/devuan/merged excalibur main contrib non-free non-free-firmware
+deb http://dev1mir.registrationsplus.net/devuan/merged excalibur-updates main contrib non-free non-free-firmware
+deb http://dev1mir.registrationsplus.net/merged excalibur-security main contrib non-free non-free-firmware
+
+# Mirror secundario en Brasil (para redundancia regional)
+deb http://devuan.c3sl.ufpr.br/devuan/merged excalibur main contrib non-free non-free-firmware
+deb http://devuan.c3sl.ufpr.br/devuan/merged excalibur-updates main contrib non-free non-free-firmware
+deb http://devuan.c3sl.ufpr.br/merged excalibur-security main contrib non-free non-free-firmware
+
+# Mirror terciario en Alemania (alta velocidad, respaldo global)
+deb http://ftp.fau.de/devuan/merged excalibur main contrib non-free non-free-firmware
+deb http://ftp.fau.de/devuan/merged excalibur-updates main contrib non-free non-free-firmware
+deb http://ftp.fau.de/merged excalibur-security main contrib non-free non-free-firmware
 EOF
 
 # Inyectar llaves GPG del host para evitar errores de validación
