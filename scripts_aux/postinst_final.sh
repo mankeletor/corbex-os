@@ -44,17 +44,21 @@ if [ -f /root/esfp.dconf ]; then
     dconf update || echo "Error dconf"
 fi
 
-# 5.1 Script de Primer Inicio (Silencioso y Robusto)
+# 5.1 Script de Primer Inicio (Silencioso y Seguro)
 cat > /etc/profile.d/esfp-firstrun.sh << 'EOF'
 #!/bin/bash
 MARKER="$HOME/.config/esfp-firstrun-done"
+
+# Solo actuar si es el usuario alumno y no se hizo antes
 if [ "$USER" = "alumno" ] && [ ! -f "$MARKER" ]; then
-    FLOG="/tmp/esfp-firstrun.log"
-    # Sudo no interactivo para tareas de limpieza
-    sudo apt-get autoremove --purge -y > "$FLOG" 2>&1
-    sudo apt-get clean >> "$FLOG" 2>&1
+    # Asegurar que el marcador se cree primero para evitar bucles
     mkdir -p "$(dirname "$MARKER")"
     touch "$MARKER"
+
+    # Agregar 'cd' al .bashrc solo si no existe ya esa línea
+    if ! grep -q "^cd$" "$HOME/.bashrc"; then
+        echo -e "\n# Forzar inicio en HOME\ncd" >> "$HOME/.bashrc"
+    fi
 fi
 EOF
 chmod 644 /etc/profile.d/esfp-firstrun.sh
