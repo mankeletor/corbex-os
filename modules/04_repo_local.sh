@@ -115,8 +115,12 @@ PAQUETES_CRITICOS=(
     libgcc-s1
     libeudev1
     mate-menu
+    mate-tweak
     mate-desktop-environment-extras
     mate-applets
+    flatpak
+    geogebra
+    curl
     vlc
     vlc-plugin-base
     chromium
