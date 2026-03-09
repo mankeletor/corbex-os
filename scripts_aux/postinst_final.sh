@@ -228,13 +228,13 @@ chmod +x /usr/local/sbin/esfp-firstrun.sh
 # 12b. Init script OpenRC
 cat > /etc/init.d/esfp-firstrun << 'INITSCRIPT'
 #!/sbin/openrc-run
-# OpenRC init script para ESFP firstrun
 
 description="ESFP Córdoba - Configuración de primer arranque"
 
 depend() {
-    need net localmount
-    after *
+    need NetworkManager
+    after NetworkManager bootmisc
+    before login
 }
 
 start() {
