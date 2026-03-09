@@ -163,13 +163,13 @@ if [ -s pseint.tgz ]; then
         cd "$INSTALL_DIR"
         strip wxPSeInt pseint 2>/dev/null
         cat > /usr/share/applications/pseint.desktop << DESKTOP
-        [Desktop Entry]
-        Name=PSeInt
-        Exec=$INSTALL_DIR/wxPSeInt
-        Icon=$INSTALL_DIR/imgs/icon64.png
-        Type=Application
-        Categories=Development;Education;
-        DESKTOP
+[Desktop Entry]
+Name=PSeInt
+Exec=$INSTALL_DIR/wxPSeInt
+Icon=$INSTALL_DIR/imgs/icon64.png
+Type=Application
+Categories=Development;Education;
+DESKTOP
         flog "PSeInt instalado correctamente"
     fi
     rm -f /tmp/pseint.tgz
@@ -244,8 +244,9 @@ start() {
 }
 INITSCRIPT
 chmod +x /etc/init.d/esfp-firstrun
-rc-update add esfp-firstrun default 2>/dev/null || log "⚠️ No se pudo registrar esfp-firstrun"
-
+# En postinst_final.sh, sección 4 (servicios)
+rc-update add NetworkManager default 2>/dev/null || true
+rc-update add esfp-firstrun default 2>/dev/null || true
 # ─────────────────────────────────────────────
 log "postinst_final.sh FINALIZADO OK"
 echo "$(date '+%Y-%m-%d %H:%M:%S') - FINALIZADO OK" >> "$LOG"
