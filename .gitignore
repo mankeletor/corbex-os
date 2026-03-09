@@ -10,7 +10,7 @@ isohome/
 temp_initrd/
 verify_initrd/
 pkg_cache/
-
+pkgs_offline.txt
 
 # --------------------
 # ARCHIVOS PESADOS / BINARIOS

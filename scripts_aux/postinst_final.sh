@@ -154,21 +154,22 @@ flog "Instalando PSeInt..."
 INSTALL_DIR="/opt/pseint"
 cd /tmp
 wget --tries=3 --timeout=30 -O pseint.tgz \
-    "https://sitsa.dl.sourceforge.net/project/pseint/20250314/pseint-l64-20250314.tgz" 2>>"$FLOG" || true
+    "https://sitsa.dl.sourceforge.net/project/pseint/20250314/pseint-l64-20250314.tgz" 2>>"$FLOG"
 
-if [ -f pseint.tgz ]; then
+# Verificar que el archivo descargado tenga contenido real
+if [ -s pseint.tgz ]; then
     tar xf pseint.tgz -C /opt/
     if [ -d "$INSTALL_DIR" ]; then
         cd "$INSTALL_DIR"
-        strip wxPSeInt pseint 2>/dev/null || true
+        strip wxPSeInt pseint 2>/dev/null
         cat > /usr/share/applications/pseint.desktop << DESKTOP
-[Desktop Entry]
-Name=PSeInt
-Exec=$INSTALL_DIR/wxPSeInt
-Icon=$INSTALL_DIR/imgs/icon64.png
-Type=Application
-Categories=Development;Education;
-DESKTOP
+        [Desktop Entry]
+        Name=PSeInt
+        Exec=$INSTALL_DIR/wxPSeInt
+        Icon=$INSTALL_DIR/imgs/icon64.png
+        Type=Application
+        Categories=Development;Education;
+        DESKTOP
         flog "PSeInt instalado correctamente"
     fi
     rm -f /tmp/pseint.tgz
@@ -181,9 +182,10 @@ flog "Configurando repo Antigravity..."
 apt-get install -y curl gnupg2 dirmngr --no-install-recommends 2>>"$FLOG" || true
 mkdir -p /etc/apt/keyrings
 
-if curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg \
-    | gpg --dearmor --yes -o /etc/apt/keyrings/antigravity-repo-key.gpg 2>>"$FLOG"; then
+curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg \
+    -o /etc/apt/keyrings/antigravity-repo-key.gpg 2>>"$FLOG"
 
+if [ -s /etc/apt/keyrings/antigravity-repo-key.gpg ]; then
     echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" \
         > /etc/apt/sources.list.d/antigravity.list
 
