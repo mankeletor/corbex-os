@@ -1,6 +1,6 @@
 # 🐧 Corbex-OS (Cordoba Excalibur Operating System)
 
-Este proyecto contiene las herramientas y scripts necesarios para generar una imagen ISO personalizada de **Devuan GNU/Linux (Excalibur)**, ahora nombrada como **Corbex-OS**, optimizada específicamente para las netbooks de la **Escuela Secundaria de Formación Profesional (ESFP) Córdoba**.
+Este proyecto contiene las herramientas y scripts necesarios para generar una imagen ISO personalizada de **Devuan GNU/Linux (Excalibur)**, ahora nombrada como **Corbex-OS**, optimizada específicamente para las netbooks de la **Escuela Secundaria de Córdoba**.
 
 ---
 
@@ -104,4 +104,4 @@ sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress && sync
 
 ---
 
-*Hecho desde la educación técnica de Córdoba para el mundo.*
+*Hecho desde la educación pública de Córdoba para el mundo.*
