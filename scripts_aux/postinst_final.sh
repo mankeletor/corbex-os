@@ -1,7 +1,7 @@
 #!/bin/bash
 # =========================================================
-# postinst_final.sh - Post-instalación (v2.0)
-# Corbex OS - Optimizado para Netbooks (4GB RAM)
+# postinst_final.sh - Post-instalación (v3.0)
+# CorbexOS - Optimizado para Netbooks (4GB RAM)
 #
 # CONTEXTO: Se ejecuta vía in-target (chroot del target).
 #   / = /target (sistema instalado)
@@ -17,7 +17,7 @@ set -x  # Modo debug
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG"; }
 
-log "=== Optimizando sistema para Corbex OS ==="
+log "=== Optimizando sistema para CorbexOS ==="
 
 # ─────────────────────────────────────────────
 # 1. Idioma y locales (✅ seguro en chroot)
@@ -119,6 +119,18 @@ log "Configurando usuario alumno..."
 chsh -s /bin/bash alumno
 usermod -d /home/alumno -m alumno 2>/dev/null || true
 
+# Configurar directorio inicial de terminal
+log "Configurando directorio inicial de terminal..."
+ALUMNO_BASHRC="/home/alumno/.bashrc"
+ALUMNO_PROFILE="/home/alumno/.bash_profile"
+touch "$ALUMNO_BASHRC" "$ALUMNO_PROFILE"
+for f in "$ALUMNO_BASHRC" "$ALUMNO_PROFILE"; do
+    if ! grep -q "Forzar inicio en HOME" "$f"; then
+        echo -e "\n# Forzar inicio en HOME\n[ \"\$PWD\" = \"/\" ] && cd \"\$HOME\"" >> "$f"
+    fi
+done
+chown alumno:alumno "$ALUMNO_BASHRC" "$ALUMNO_PROFILE"
+
 # ─────────────────────────────────────────────
 # 11. Limpieza parcial (✅ seguro en chroot)
 #     apt-get autoremove va en firstrun
@@ -128,13 +140,55 @@ apt-get purge -y xterm 2>/dev/null || true
 apt-get clean
 
 # ─────────────────────────────────────────────
-# 12. Crear servicio FIRSTRUN (OpenRC)
+# 12. Instalar PSeInt offline desde ISO
+# ─────────────────────────────────────────────
+log "Instalando PSeInt offline..."
+if [ -s /cdrom/extras/pseint.tgz ]; then
+    tar xf /cdrom/extras/pseint.tgz -C /opt/
+    if [ -d /opt/pseint ]; then
+        strip /opt/pseint/wxPSeInt /opt/pseint/pseint 2>/dev/null || true
+        cat > /usr/share/applications/pseint.desktop << DESKTOP
+[Desktop Entry]
+Name=PSeInt
+Exec=/opt/pseint/wxPSeInt
+Icon=/opt/pseint/imgs/icon64.png
+Type=Application
+Categories=Development;Education;
+DESKTOP
+        log "PSeInt instalado ✅"
+    fi
+else
+    log "⚠️ /cdrom/extras/pseint.tgz no encontrado"
+fi
+
+# ─────────────────────────────────────────────
+# 13. Instalar Antigravity offline desde ISO
+# ─────────────────────────────────────────────
+log "Instalando Antigravity offline..."
+AGDIR="/cdrom/extras/antigravity"
+if [ -s "$AGDIR/antigravity-repo-key.gpg" ] && \
+   ls "$AGDIR"/antigravity_*.deb 1>/dev/null 2>&1; then
+    mkdir -p /etc/apt/keyrings
+    cp "$AGDIR/antigravity-repo-key.gpg" /etc/apt/keyrings/
+    DEBIAN_FRONTEND=noninteractive dpkg -i "$AGDIR"/antigravity_*.deb 2>/dev/null || \
+        apt-get install -f -y 2>/dev/null || true
+    echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] \
+https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ \
+antigravity-debian main" > /etc/apt/sources.list.d/antigravity.list
+    log "Antigravity instalado ✅"
+else
+    log "⚠️ Antigravity no encontrado en /cdrom/extras/"
+fi
+
+# ─────────────────────────────────────────────
+# 14. Crear servicio FIRSTRUN (OpenRC)
 #     Se ejecuta UNA vez en el primer arranque real
 #     y se auto-deshabilita.
+#     Ya no requiere red - solo limpieza y post-config.
 # ─────────────────────────────────────────────
 log "Instalando servicio corbex-firstrun..."
 
-# 12a. Script principal del firstrun
+# 14a. Script principal del firstrun
 mkdir -p /usr/local/sbin
 cat > /usr/local/sbin/corbex-firstrun.sh << 'FIRSTRUN_SCRIPT'
 #!/bin/bash
@@ -142,6 +196,7 @@ cat > /usr/local/sbin/corbex-firstrun.sh << 'FIRSTRUN_SCRIPT'
 # corbex-firstrun.sh - Tareas de primer arranque
 # Se ejecuta una sola vez como servicio OpenRC y se
 # auto-deshabilita al finalizar.
+# No requiere red - solo limpieza final y post-config.
 # =========================================================
 set -x
 FLOG="/var/log/corbex-firstrun.log"
@@ -149,73 +204,11 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') - FIRSTRUN INICIADO" > "$FLOG"
 
 flog() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$FLOG"; }
 
-# --- PSeInt (requiere red) ---
-flog "Instalando PSeInt..."
-INSTALL_DIR="/opt/pseint"
-cd /tmp
-wget --tries=3 --timeout=30 -O pseint.tgz \
-    "https://sitsa.dl.sourceforge.net/project/pseint/20250314/pseint-l64-20250314.tgz" 2>>"$FLOG"
-
-# Verificar que el archivo descargado tenga contenido real
-if [ -s pseint.tgz ]; then
-    tar xf pseint.tgz -C /opt/
-    if [ -d "$INSTALL_DIR" ]; then
-        cd "$INSTALL_DIR"
-        strip wxPSeInt pseint 2>/dev/null
-        cat > /usr/share/applications/pseint.desktop << DESKTOP
-[Desktop Entry]
-Name=PSeInt
-Exec=$INSTALL_DIR/wxPSeInt
-Icon=$INSTALL_DIR/imgs/icon64.png
-Type=Application
-Categories=Development;Education;
-DESKTOP
-        flog "PSeInt instalado correctamente"
-    fi
-    rm -f /tmp/pseint.tgz
-else
-    flog "⚠️ No se pudo descargar PSeInt (sin conexión?)"
-fi
-
-# --- Antigravity Auto-Updater (requiere red) ---
-flog "Configurando repo Antigravity..."
-apt-get install -y curl gnupg2 dirmngr --no-install-recommends 2>>"$FLOG" || true
-mkdir -p /etc/apt/keyrings
-
-curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg \
-    -o /etc/apt/keyrings/antigravity-repo-key.gpg 2>>"$FLOG"
-
-if [ -s /etc/apt/keyrings/antigravity-repo-key.gpg ]; then
-    echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" \
-        > /etc/apt/sources.list.d/antigravity.list
-
-    apt-get update 2>>"$FLOG" && \
-        apt-get install -y antigravity 2>>"$FLOG" || \
-        flog "⚠️ No se pudo instalar Antigravity"
-else
-    flog "⚠️ No se pudo obtener la clave GPG de Antigravity"
-fi
-
 # --- Limpieza final (seguro con sistema arrancado) ---
 flog "Limpieza final..."
 apt-get autoremove --purge -y 2>>"$FLOG" || true
 apt-get clean
 
-flog "Configurando directorio inicial de terminal..."
-ALUMNO_BASHRC="/home/alumno/.bashrc"
-ALUMNO_PROFILE="/home/alumno/.bash_profile"
-
-# Crear si no existen
-touch "$ALUMNO_BASHRC" "$ALUMNO_PROFILE"
-
-# Solo redirige si arrancó en / (caso autologin LightDM)
-for f in "$ALUMNO_BASHRC" "$ALUMNO_PROFILE"; do
-    if ! grep -q "Forzar inicio en HOME" "$f"; then
-        echo -e "\n# Forzar inicio en HOME\n[ \"\$PWD\" = \"/\" ] && cd \"\$HOME\"" >> "$f"
-    fi
-done
-
-chown alumno:alumno "$ALUMNO_BASHRC" "$ALUMNO_PROFILE"
 # --- Auto-deshabilitarse ---
 flog "Deshabilitando servicio firstrun..."
 rc-update del corbex-firstrun default 2>/dev/null || true
@@ -225,28 +218,28 @@ exit 0
 FIRSTRUN_SCRIPT
 chmod +x /usr/local/sbin/corbex-firstrun.sh
 
-# 12b. Init script OpenRC
+# 14b. Init script OpenRC
 cat > /etc/init.d/corbex-firstrun << 'INITSCRIPT'
 #!/sbin/openrc-run
 
-description="Corbex OS - Configuración de primer arranque"
+description="CorbexOS - Configuración de primer arranque"
 
 depend() {
-    need NetworkManager
+    want NetworkManager
     after NetworkManager bootmisc
-    before login
+    keyword -shutdown -reboot
 }
 
 start() {
-    ebegin "Ejecutando configuración de primer arranque Corbex..."
+    ebegin "Ejecutando configuración de primer arranque CorbexOS..."
     /usr/local/sbin/corbex-firstrun.sh
     eend $?
 }
 INITSCRIPT
 chmod +x /etc/init.d/corbex-firstrun
-# En postinst_final.sh, sección 4 (servicios)
 rc-update add NetworkManager default 2>/dev/null || true
 rc-update add corbex-firstrun default 2>/dev/null || true
+
 # ─────────────────────────────────────────────
 log "postinst_final.sh FINALIZADO OK"
 echo "$(date '+%Y-%m-%d %H:%M:%S') - FINALIZADO OK" >> "$LOG"

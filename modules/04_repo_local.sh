@@ -270,5 +270,58 @@ $(find "dists/excalibur/local/binary-amd64" -type f \( -name "Packages*" -o -nam
 done)
 EOF
 
+# ─────────────────────────────────────────────
+# EXTRAS OFFLINE: PSeInt + Antigravity
+# Se descargan en build time y se incluyen en la ISO
+# ─────────────────────────────────────────────
+EXTRAS_DIR="$ISO_HOME/extras"
+mkdir -p "$EXTRAS_DIR/antigravity"
+
+# --- PSeInt ---
+PSEINT_VER="20250314"
+PSEINT_FILE="$EXTRAS_DIR/pseint.tgz"
+if [ ! -s "$PSEINT_FILE" ]; then
+    echo "   Descargando PSeInt ${PSEINT_VER}..."
+    wget --tries=3 --timeout=60 \
+        -O "$PSEINT_FILE" \
+        "https://downloads.sourceforge.net/project/pseint/${PSEINT_VER}/pseint-l64-${PSEINT_VER}.tgz" || {
+        echo "⚠️ No se pudo descargar PSeInt" >> "$WARN_LOG"
+        rm -f "$PSEINT_FILE"
+    }
+else
+    echo "   PSeInt ya en cache, reutilizando ✅"
+fi
+
+# --- Antigravity GPG key ---
+GPG_FILE="$EXTRAS_DIR/antigravity/antigravity-repo-key.gpg"
+if [ ! -s "$GPG_FILE" ]; then
+    echo "   Descargando clave GPG de Antigravity..."
+    curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg \
+        -o "$GPG_FILE" || {
+        echo "⚠️ No se pudo descargar clave GPG de Antigravity" >> "$WARN_LOG"
+        rm -f "$GPG_FILE"
+    }
+fi
+
+# --- Antigravity .deb ---
+if [ -s "$GPG_FILE" ] && ! ls "$EXTRAS_DIR/antigravity/antigravity_"*.deb 1>/dev/null 2>&1; then
+    echo "   Descargando .deb de Antigravity..."
+    echo "deb [signed-by=$GPG_FILE] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" \
+        > "$TMP_DIR/antigravity-build.list"
+    apt-get -c "$APT_SANDBOX/apt.conf" update \
+        -o Dir::Etc::sourcelist="$TMP_DIR/antigravity-build.list" \
+        -o Dir::Etc::sourceparts="-" \
+        -o APT::Get::List-Cleanup=0 -qq 2>/dev/null || true
+    (cd "$EXTRAS_DIR/antigravity" && \
+        apt-get -c "$APT_SANDBOX/apt.conf" download antigravity \
+        -o Dir::Etc::sourcelist="$TMP_DIR/antigravity-build.list" \
+        -o Dir::Etc::sourceparts="-" \
+        -o APT::Get::AllowUnauthenticated=true -qq 2>/dev/null) || \
+        echo "⚠️ No se pudo descargar .deb de Antigravity" >> "$WARN_LOG"
+    rm -f "$TMP_DIR/antigravity-build.list"
+fi
+
+echo "✅ Extras offline listos en $EXTRAS_DIR"
+
 rm -rf "$EXTRACT_DIR" "$APT_SANDBOX"
 echo "✅ Módulo 04 finalizado exitosamente."
