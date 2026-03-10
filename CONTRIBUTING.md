@@ -36,7 +36,7 @@ Antes de enviar un cambio, por favor verificá:
 ### Áreas prioritarias para colaborar:
 *   🔊 **Audio**: Mejora de los scripts de amplificación para hardware específico de netbooks Juana Manso / Conectar Igualdad.
 *   🔋 **Energía**: Optimización de consumo de batería en OpenRC.
-*   🎨 **Branding**: Arte visual de la ESFP para el cargador de arranque (ISOLINUX).
+*   🎨 **Branding**: Arte visual de Corbex para el cargador de arranque (ISOLINUX).
 
 ## ⚖️ Licencia
 Al contribuir, aceptás que tu código será liberado bajo la licencia **GNU GPL v3**.

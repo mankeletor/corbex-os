@@ -1,14 +1,14 @@
 #!/bin/bash
 # =========================================================
 # postinst_final.sh - Post-instalación (v2.0)
-# ESFP Córdoba - Optimizado para Netbooks (4GB RAM)
+# Corbex OS - Optimizado para Netbooks (4GB RAM)
 #
 # CONTEXTO: Se ejecuta vía in-target (chroot del target).
 #   / = /target (sistema instalado)
 #   /root = /target/root
 #   NO hay red confiable, NO hay kernel corriendo.
 #   Las tareas que requieren red o sistema arrancado van
-#   al servicio OpenRC esfp-firstrun.
+#   al servicio OpenRC corbex-firstrun.
 # =========================================================
 
 LOG="/var/log/custom-postinst.log"
@@ -17,7 +17,7 @@ set -x  # Modo debug
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG"; }
 
-log "=== Optimizando sistema para ESFP Córdoba ==="
+log "=== Optimizando sistema para Corbex OS ==="
 
 # ─────────────────────────────────────────────
 # 1. Idioma y locales (✅ seguro en chroot)
@@ -68,8 +68,8 @@ user-db:user
 system-db:local
 EOF
 
-if [ -f /root/esfp.dconf ]; then
-    cp /root/esfp.dconf /etc/dconf/db/local.d/01-esfp-custom
+if [ -f /root/corbex.dconf ]; then
+    cp /root/corbex.dconf /etc/dconf/db/local.d/01-corbex-custom
     dconf update || log "⚠️ Error en dconf update"
 fi
 
@@ -132,19 +132,19 @@ apt-get clean
 #     Se ejecuta UNA vez en el primer arranque real
 #     y se auto-deshabilita.
 # ─────────────────────────────────────────────
-log "Instalando servicio esfp-firstrun..."
+log "Instalando servicio corbex-firstrun..."
 
 # 12a. Script principal del firstrun
 mkdir -p /usr/local/sbin
-cat > /usr/local/sbin/esfp-firstrun.sh << 'FIRSTRUN_SCRIPT'
+cat > /usr/local/sbin/corbex-firstrun.sh << 'FIRSTRUN_SCRIPT'
 #!/bin/bash
 # =========================================================
-# esfp-firstrun.sh - Tareas de primer arranque
+# corbex-firstrun.sh - Tareas de primer arranque
 # Se ejecuta una sola vez como servicio OpenRC y se
 # auto-deshabilita al finalizar.
 # =========================================================
 set -x
-FLOG="/var/log/esfp-firstrun.log"
+FLOG="/var/log/corbex-firstrun.log"
 echo "$(date '+%Y-%m-%d %H:%M:%S') - FIRSTRUN INICIADO" > "$FLOG"
 
 flog() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$FLOG"; }
@@ -218,18 +218,18 @@ done
 chown alumno:alumno "$ALUMNO_BASHRC" "$ALUMNO_PROFILE"
 # --- Auto-deshabilitarse ---
 flog "Deshabilitando servicio firstrun..."
-rc-update del esfp-firstrun default 2>/dev/null || true
+rc-update del corbex-firstrun default 2>/dev/null || true
 
 flog "FIRSTRUN FINALIZADO OK"
 exit 0
 FIRSTRUN_SCRIPT
-chmod +x /usr/local/sbin/esfp-firstrun.sh
+chmod +x /usr/local/sbin/corbex-firstrun.sh
 
 # 12b. Init script OpenRC
-cat > /etc/init.d/esfp-firstrun << 'INITSCRIPT'
+cat > /etc/init.d/corbex-firstrun << 'INITSCRIPT'
 #!/sbin/openrc-run
 
-description="ESFP Córdoba - Configuración de primer arranque"
+description="Corbex OS - Configuración de primer arranque"
 
 depend() {
     need NetworkManager
@@ -238,15 +238,15 @@ depend() {
 }
 
 start() {
-    ebegin "Ejecutando configuración de primer arranque ESFP..."
-    /usr/local/sbin/esfp-firstrun.sh
+    ebegin "Ejecutando configuración de primer arranque Corbex..."
+    /usr/local/sbin/corbex-firstrun.sh
     eend $?
 }
 INITSCRIPT
-chmod +x /etc/init.d/esfp-firstrun
+chmod +x /etc/init.d/corbex-firstrun
 # En postinst_final.sh, sección 4 (servicios)
 rc-update add NetworkManager default 2>/dev/null || true
-rc-update add esfp-firstrun default 2>/dev/null || true
+rc-update add corbex-firstrun default 2>/dev/null || true
 # ─────────────────────────────────────────────
 log "postinst_final.sh FINALIZADO OK"
 echo "$(date '+%Y-%m-%d %H:%M:%S') - FINALIZADO OK" >> "$LOG"
