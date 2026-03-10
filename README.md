@@ -1,6 +1,6 @@
-# 🐧 Devuan CorbexOS Edition (Excalibur)
+# 🐧 Corbex-OS (Cordoba Excalibur Operating System)
 
-Este proyecto contiene las herramientas y scripts necesarios para generar una imagen ISO personalizada de **Devuan GNU/Linux (Excalibur)**, optimizada específicamente para las netbooks de la **Escuela Secundaria de Formación Profesional (ESFP) Córdoba**.
+Este proyecto contiene las herramientas y scripts necesarios para generar una imagen ISO personalizada de **Devuan GNU/Linux (Excalibur)**, ahora nombrada como **Corbex-OS**, optimizada específicamente para las netbooks de la **Escuela Secundaria de Formación Profesional (ESFP) Córdoba**.
 
 ---
 
@@ -18,7 +18,7 @@ Este proyecto contiene las herramientas y scripts necesarios para generar una im
 ## 📂 Estructura del Repositorio
 
 ```
-devuan-corbexos/
+corbex-os/
 ├── main.sh              # Script principal de customización de la ISO
 ├── postinst.sh          # Script de post-instalación (escritorio y optimizaciones)
 ├── preseed.cfg          # Respuestas automáticas para el instalador Debian/Devuan
@@ -57,8 +57,8 @@ devuan-corbexos/
 
 1. Clonar este repositorio:
    ```bash
-   git clone https://github.com/mankeletor/devuan-corbexos.git
-   cd devuan-corbexos
+   git clone https://github.com/mankeletor/corbex-os.git
+   cd corbex-os
    ```
 
 2. Editar `config.env` con las rutas correctas a las ISOs descargadas:
@@ -84,13 +84,13 @@ Si no querés compilar la ISO por tu cuenta, podés descargar la versión establ
 Una vez descargada la ISO, verificá que no esté corrupta con el archivo `.sha256` incluido:
 
 ```bash
-sha256sum -c devuan-corbexos.iso.sha256
+sha256sum -c corbex-os.iso.sha256
 ```
 
 ### 💾 Grabar en USB
 
 ```bash
-sudo dd if=devuan-corbexos.iso of=/dev/sdX bs=4M status=progress && sync
+sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress && sync
 ```
 
 > ⚠️ Reemplazá `/dev/sdX` con el dispositivo correcto (verificá con `lsblk` antes de ejecutar).
