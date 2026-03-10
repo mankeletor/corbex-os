@@ -5,7 +5,7 @@
 # --------------------
 # DIRECTORIOS DE TRABAJO (generados por el script)
 # --------------------
-custom_esfp/
+custom*/
 isohome/
 temp_initrd/
 verify_initrd/
