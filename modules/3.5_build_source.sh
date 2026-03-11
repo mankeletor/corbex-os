@@ -1,10 +1,10 @@
 #!/bin/bash
 # CorbexOS - Generador Dinámico de Repositorios
-# Uso: ./3.5_build_source.sh "deb.devuan.nz"
+# Uso: ./3.5_build_source.sh "dev1mir.registrationsplus.net"
 #
 # Sin set -e: errores manejados explícitamente para no interferir con el discovery.
 # Salidas:
-#   stdout → contenido del sources.list (solo líneas "deb ...")
+#   stdout → líneas "deb ..." listas para sources.list (sin comentarios)
 #   stderr → mensajes de log/error (prefijados con #)
 #   exit 0 → sources.list válido generado
 #   exit 1 → fallo crítico (mirror no encontrado o 'main' no disponible)
@@ -24,15 +24,19 @@ if [ -f "$CONFIG_ENV" ]; then
     source "$CONFIG_ENV"
 fi
 
-# Valores por defecto (override por config.env o variables de entorno)
+# Valores por defecto (override por config.env o entorno)
 RELEASE="${RELEASE:-excalibur}"
 ARCH="${ARCH:-amd64}"
-CURL_TIMEOUT="${CURL_TIMEOUT:-8}"       # Overrideable — aumentado de 5 a 8s
-CURL_MAX_REDIRS="${CURL_MAX_REDIRS:-3}" # Límite de redirects para evitar loops
+CURL_TIMEOUT="${CURL_TIMEOUT:-8}"
+CURL_MAX_REDIRS="${CURL_MAX_REDIRS:-3}"
 
+# Rutas conocidas del mirror — orden importante: más específica primero
 PROTOCOLS=("https" "http")
 RUTAS=("/devuan/merged" "/merged" "")
 WANTED_COMPONENTS=("main" "contrib" "non-free" "non-free-firmware")
+
+# Suites adicionales a detectar (cada una hace su propio discovery de ruta)
+EXTRA_SUITE_SUFFIXES=("-security" "-updates")
 
 # --- 1. Leer mirror desde argumento ---
 MIRROR_HOST="${1:-}"
@@ -43,7 +47,6 @@ if [ -z "$MIRROR_HOST" ]; then
 fi
 
 # --- Helper: devuelve el HTTP status code de una URL ---
-# Limita redirects y tiempo total para evitar falsos positivos con CDNs rotos
 http_status() {
     curl -sL \
         --connect-timeout "$CURL_TIMEOUT" \
@@ -54,37 +57,37 @@ http_status() {
         "$1" 2>/dev/null
 }
 
-# --- 2. Discovery: Protocolo y Ruta ---
-BASE_URL=""
-for proto in "${PROTOCOLS[@]}"; do
-    for path in "${RUTAS[@]}"; do
-        TEST_URL="${proto}://${MIRROR_HOST}${path}/dists/${RELEASE}/Release"
-        STATUS=$(http_status "$TEST_URL")
-        if [ "$STATUS" = "200" ]; then
-            BASE_URL="${proto}://${MIRROR_HOST}${path}"
-            echo "# Mirror encontrado: $BASE_URL" >&2
-            break 2
-        fi
-        echo "# Probando $TEST_URL → HTTP $STATUS" >&2
+# --- Helper: encuentra la base URL de una suite dada ---
+# Imprime la URL encontrada a stdout, o nada si no la encuentra.
+# Uso: find_suite_base_url "excalibur-security"
+find_suite_base_url() {
+    local suite="$1"
+    local proto path test_url status
+    for proto in "${PROTOCOLS[@]}"; do
+        for path in "${RUTAS[@]}"; do
+            test_url="${proto}://${MIRROR_HOST}${path}/dists/${suite}/Release"
+            status=$(http_status "$test_url")
+            echo "# Probando $test_url → HTTP $status" >&2
+            if [ "$status" = "200" ]; then
+                echo "${proto}://${MIRROR_HOST}${path}"
+                return 0
+            fi
+        done
     done
-done
+    return 1
+}
 
-if [ -z "$BASE_URL" ]; then
-    echo "# Error: Estructura Devuan (release=$RELEASE) no encontrada en $MIRROR_HOST" >&2
+# --- 2. Discovery de suite principal ---
+echo "# Buscando suite principal: $RELEASE" >&2
+BASE_URL=$(find_suite_base_url "$RELEASE") || {
+    echo "# Error: Suite '$RELEASE' no encontrada en $MIRROR_HOST" >&2
     exit 1
-fi
+}
+echo "# Suite principal encontrada: $BASE_URL" >&2
 
-# --- 3. Validación de Componentes ---
-# Se validan todos en paralelo para evitar race conditions en CDNs con failover:
-# cada componente se chequea en el mismo ciclo de tiempo, no secuencialmente.
-FINAL_COMPONENTS=()
-FAILED_COMPONENTS=()
-
+# --- 3. Validación de componentes (en paralelo para evitar race conditions) ---
 validate_component() {
-    local comp="$1"
-    local base_url="$2"
-    local release="$3"
-    local arch="$4"
+    local comp="$1" base_url="$2" release="$3" arch="$4"
     local check_url="${base_url}/dists/${release}/${comp}/binary-${arch}/Packages.gz"
     local status
     status=$(http_status "$check_url")
@@ -94,10 +97,8 @@ validate_component() {
         echo "FAIL:$comp:$status"
     fi
 }
-
 export -f http_status validate_component
 
-# Lanzar validaciones en paralelo y recolectar resultados ordenados
 VALIDATION_RESULTS=()
 while IFS= read -r result; do
     VALIDATION_RESULTS+=("$result")
@@ -106,16 +107,10 @@ done < <(
     xargs -I{} -P4 bash -c 'validate_component "$@"' _ {} "$BASE_URL" "$RELEASE" "$ARCH"
 )
 
-# Procesar resultados respetando el orden original de WANTED_COMPONENTS
+FINAL_COMPONENTS=()
+FAILED_COMPONENTS=()
 for comp in "${WANTED_COMPONENTS[@]}"; do
-    matched=""
-    for result in "${VALIDATION_RESULTS[@]}"; do
-        if [[ "$result" == "OK:${comp}" ]]; then
-            matched="ok"
-            break
-        fi
-    done
-    if [ -n "$matched" ]; then
+    if printf "%s\n" "${VALIDATION_RESULTS[@]}" | grep -q "^OK:${comp}$"; then
         FINAL_COMPONENTS+=("$comp")
         echo "# Componente validado: $comp" >&2
     else
@@ -125,37 +120,49 @@ for comp in "${WANTED_COMPONENTS[@]}"; do
     fi
 done
 
-# Validación mínima: 'main' es obligatorio
+# 'main' es obligatorio
 if [[ ! " ${FINAL_COMPONENTS[*]} " =~ " main " ]]; then
-    echo "# Error: Mirror incompleto — componente 'main' no hallado." >&2
+    echo "# Error: Mirror incompleto — componente 'main' no hallado en $BASE_URL." >&2
     exit 1
 fi
 
-# Advertencia si faltan componentes esperados (no bloquea, pero informa al caller)
 if [ ${#FAILED_COMPONENTS[@]} -gt 0 ]; then
-    echo "# Advertencia: Componentes no disponibles en este mirror: ${FAILED_COMPONENTS[*]}" >&2
+    echo "# Advertencia: Componentes no disponibles: ${FAILED_COMPONENTS[*]}" >&2
 fi
 
-# --- 4. Detectar suites opcionales (-updates, -security) ---
-EXTRA_SUITES=()
-for suite_suffix in "-updates" "-security"; do
-    SUITE_URL="$BASE_URL/dists/${RELEASE}${suite_suffix}/Release"
-    STATUS=$(http_status "$SUITE_URL")
-    if [ "$STATUS" = "200" ]; then
-        EXTRA_SUITES+=("${RELEASE}${suite_suffix}")
-        echo "# Suite adicional disponible: ${RELEASE}${suite_suffix}" >&2
+COMP_STRING="${FINAL_COMPONENTS[*]}"
+
+# --- 4. Discovery independiente de cada suite adicional ---
+# Cada suite puede tener una base URL diferente.
+# Confirmado desde sources.list de instalación real de Devuan excalibur:
+#   excalibur          → /devuan/merged/
+#   excalibur-updates  → /devuan/merged/
+#   excalibur-security → /merged          ← ruta distinta
+declare -A SUITE_BASE_URLS
+
+for suffix in "${EXTRA_SUITE_SUFFIXES[@]}"; do
+    SUITE_NAME="${RELEASE}${suffix}"
+    echo "# Buscando suite adicional: $SUITE_NAME" >&2
+    SUITE_BASE=""
+    SUITE_BASE=$(find_suite_base_url "$SUITE_NAME") || true
+    if [ -n "$SUITE_BASE" ]; then
+        SUITE_BASE_URLS["$SUITE_NAME"]="$SUITE_BASE"
+        echo "# Suite adicional encontrada: $SUITE_NAME → $SUITE_BASE" >&2
+    else
+        echo "# Suite adicional no disponible (ignorada): $SUITE_NAME" >&2
     fi
 done
 
 # --- 5. Generar sources.list a stdout ---
-# SOLO líneas "deb ..." van a stdout para que el caller pueda capturar limpiamente.
-# Los comentarios informativos van a stderr.
-COMP_STRING="${FINAL_COMPONENTS[*]}"
-
+# SOLO líneas "deb ..." — sin comentarios, para que el caller capture limpiamente.
 echo "deb $BASE_URL $RELEASE $COMP_STRING"
-for suite in "${EXTRA_SUITES[@]}"; do
-    echo "deb $BASE_URL $suite $COMP_STRING"
+
+for suffix in "${EXTRA_SUITE_SUFFIXES[@]}"; do
+    SUITE_NAME="${RELEASE}${suffix}"
+    if [ -n "${SUITE_BASE_URLS[$SUITE_NAME]:-}" ]; then
+        echo "deb ${SUITE_BASE_URLS[$SUITE_NAME]} $SUITE_NAME $COMP_STRING"
+    fi
 done
 
-echo "# sources.list generado correctamente (${#FINAL_COMPONENTS[@]} componentes, $((1 + ${#EXTRA_SUITES[@]})) suites)." >&2
+echo "# sources.list generado: suite principal + ${#SUITE_BASE_URLS[@]} suites adicionales." >&2
 exit 0

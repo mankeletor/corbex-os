@@ -21,7 +21,6 @@ if [ ! -f ./config.env ]; then
     echo "❌ Error: config.env no encontrado."
     exit 1
 fi
-source ./config.env
 set -a
 source ./config.env
 set +a
@@ -67,7 +66,7 @@ run_module "01_check_deps.sh"
 run_module "02_extract_iso.sh"
 
 # Orden de Dependencia Crítico: 04 antes que 03 (Sincrónico)
-run_module "04_repo_local.sh" $CLEAN_ARG
+run_module "04_repo_local.sh" "$CLEAN_ARG"
 run_module "03_build_initrd.sh"
 
 run_module "05_build_iso.sh"

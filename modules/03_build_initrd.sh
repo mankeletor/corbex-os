@@ -8,7 +8,7 @@ echo "📦 [Módulo 03] Modificando Initrd e Inyectando archivos..."
 # Carga de configuración corregida
 if [ -z "$ISO_ORIGINAL" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    source "$BASE_DIR/config.env"
+    source "$SCRIPT_DIR/../config.env"
 fi
 
 # 1. Cargar paquetes desde pkgs_manual.txt (Selección manual para preseed)
@@ -57,6 +57,7 @@ cp "$BASE_DIR/preseed.cfg" ./preseed.cfg
 cp "$BASE_DIR/scripts_aux/postinst_final.sh" ./postinst.sh
 cp "$BASE_DIR/templates/rc.conf" ./rc.conf
 cp "$BASE_DIR/templates/corbex.dconf" ./corbex.dconf
+cp "$BASE_DIR/pkgs_manual.txt" ./pkgs_manual.txt
 
 # --- NUEVO: Script de intervención radical (finish-install) ---
 # Optimizado para RAM: solo lanza apt tras asegurar que el target tiene el repo local

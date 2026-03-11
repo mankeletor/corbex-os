@@ -55,9 +55,6 @@ secondary-color='rgb(60,143,37)'
 [org/mate/desktop/peripherals/keyboard]
 numlock-state='off'
 
-[org/mate/desktop/session]
-session-start=1772520957
-
 [org/mate/desktop/sound]
 event-sounds=true
 theme-name='freedesktop'

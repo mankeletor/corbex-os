@@ -21,6 +21,8 @@ WORKDIR="${WORKDIR:-$BASE_DIR/custom_corbex}"
 PKG_CACHE="$BASE_DIR/pkg_cache"
 LOG_FILE="$WORKDIR/logs/04_repo_local.log"
 WARN_LOG="$WORKDIR/logs/warnings.log"
+TMP_DIR=$(mktemp -d)
+TMPDIR_CREATED=true
 mkdir -p "$WORKDIR/logs" "$PKG_CACHE" "$TMP_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
@@ -54,10 +56,15 @@ mkdir -p "$APT_SANDBOX/var/cache/apt/archives/partial"
 mkdir -p "$APT_SANDBOX/etc/apt/preferences.d"
 mkdir -p "$APT_SANDBOX/var/log/apt"
 
-SOURCES_OUTPUT=$("$BASE_DIR/modules/3.5_build_source.sh" "dev1mir.registrationsplus.net") || true
-if [ -z "$SOURCES_OUTPUT" ]; then
-    echo "⚠️ Advertencia: 3.5_build_source.sh no generó salida. Usando sources.list manual."
-    SOURCES_OUTPUT="deb http://dev1mir.registrationsplus.net/devuan/merged ${RELEASE:-excalibur} main contrib non-free non-free-firmware"
+SOURCES_OUTPUT=""
+BUILD_SOURCE_EXIT=0
+SOURCES_OUTPUT=$("$BASE_DIR/modules/3.5_build_source.sh" "dev1mir.registrationsplus.net" 2>>"$LOG_FILE") || BUILD_SOURCE_EXIT=$?
+
+if [ "$BUILD_SOURCE_EXIT" -ne 0 ] || [ -z "$SOURCES_OUTPUT" ]; then
+    echo "⚠️  3.5_build_source.sh falló (exit $BUILD_SOURCE_EXIT). Usando sources.list de fallback." | tee -a "$WARN_LOG"
+    SOURCES_OUTPUT="deb http://dev1mir.registrationsplus.net/devuan/merged ${RELEASE:-excalibur} main contrib non-free non-free-firmware\ndeb http://dev1mir.registrationsplus.net/merged ${RELEASE:-excalibur}-security main contrib non-free non-free-firmware"
+else
+    echo "   ✅ Mirror resuelto correctamente."
 fi
 echo "$SOURCES_OUTPUT" > "$APT_SANDBOX/etc/apt/sources.list"
 
@@ -189,8 +196,6 @@ fi
 EXTRACT_DIR="$WORKDIR/pool1_files"
 POOL1_INDEX="$WORKDIR/pool1_index.txt"
 # Agregar cerca de donde definís EXTRAS_DIR, antes de usarlo:
-TMP_DIR="${TMP_DIR:-$(mktemp -d)}"
-TMPDIR_CREATED=true
 echo "   Extrayendo Pool1.iso..."
 rm -rf "$EXTRACT_DIR" 2>/dev/null
 mkdir -p "$EXTRACT_DIR"
@@ -213,7 +218,7 @@ process_pkg() {
 
     # 2. Buscar en índice de Pool1
     local DEB_PATH
-    DEB_PATH=$(grep -m1 "/${pkg}_[0-9]" "$POOL1_INDEX" || true)
+    DEB_PATH=$(grep -m1 "/${pkg}_" "$POOL1_INDEX" || true)
     
     if [ -n "$DEB_PATH" ] && [ -f "$DEB_PATH" ]; then
         cp "$DEB_PATH" "$ISO_HOME/pool/local/" || echo "❌ Error copiando $pkg desde Pool1" >> "$WARN_LOG"
@@ -246,6 +251,20 @@ export -f process_pkg
 
 echo "   Iniciando copia/descarga paralela..."
 printf "%s\n" "${PAQUETES[@]}" | xargs -I {} -P "$THREADS" bash -c 'process_pkg "$@"' _ {}
+
+# Verificación de paquetes críticos post-procesamiento
+echo "   Verificando paquetes críticos en pool/local..."
+PAQUETES_FALTANTES=()
+for pkg in chromium firmware-linux-nonfree intel-microcode vlc network-manager; do
+    if ! ls "$ISO_HOME/pool/local/${pkg}_"*.deb 1>/dev/null 2>&1; then
+        PAQUETES_FALTANTES+=("$pkg")
+    fi
+done
+if [ ${#PAQUETES_FALTANTES[@]} -gt 0 ]; then
+    echo "⚠️  Paquetes críticos NO incluidos: ${PAQUETES_FALTANTES[*]}" | tee -a "$WARN_LOG"
+else
+    echo "   ✅ Todos los paquetes críticos verificados."
+fi
 
 # 4. Generar Índices Apt
 echo "   Generando índices de repositorio local..."
