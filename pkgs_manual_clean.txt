@@ -6,11 +6,11 @@ atril
 audacity
 bash
 bash-completion
-bootlogd
 build-essential
 busybox
 celluloid
 cheese
+chromium
 console-setup
 coreutils
 cpio

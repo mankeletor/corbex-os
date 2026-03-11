@@ -122,7 +122,20 @@ log "Limpieza parcial..."
 apt-get purge -y xterm 2>/dev/null || true
 apt-get clean
 rc-update add openntpd default
-rc-service openntpd start
+rc-service openntpd start || true
+ 
+# ─────────────────────────────────────────────
+# 11b. Fix working directory en sesión X (autologin)
+#      Sin esto el CWD al iniciar sesión es / en vez de $HOME
+# ─────────────────────────────────────────────
+log "Configurando fix working directory Xsession..."
+mkdir -p /etc/X11/Xsession.d
+cat > /etc/X11/Xsession.d/99cd-home << 'XSESSION_EOF'
+# CorbexOS: fix CWD=/ en sesiones de autologin
+if [ "$PWD" = "/" ] && [ -n "$HOME" ] && [ -d "$HOME" ]; then
+    cd "$HOME"
+fi
+XSESSION_EOF
 
 # ─────────────────────────────────────────────
 # 12. Instalar PSeInt offline desde ISO

@@ -24,7 +24,6 @@ for cmd in cpio gzip xorriso curl rsync wget awk sed dpkg-scanpackages apt-ftpar
         exit 1
     fi
 done
-
 # 2. Verificar archivos críticos de isolinux
 if [ ! -f "/usr/lib/ISOLINUX/isohdpfx.bin" ]; then
     echo "❌ Error: /usr/lib/ISOLINUX/isohdpfx.bin no encontrado. Instalá isolinux."
