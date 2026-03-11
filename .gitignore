@@ -10,7 +10,7 @@ isohome/
 temp_initrd/
 verify_initrd/
 pkg_cache/
-*offline.txt
+pkgs_offline.txt
 *.bak
 # --------------------
 # ARCHIVOS PESADOS / BINARIOS
