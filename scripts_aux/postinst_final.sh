@@ -128,8 +128,8 @@ rc-service openntpd start
 # 12. Instalar PSeInt offline desde ISO
 # ─────────────────────────────────────────────
 log "Instalando PSeInt offline..."
-if [ -s /cdrom/extras/pseint.tgz ]; then
-    tar xf /cdrom/extras/pseint.tgz -C /opt/
+if [ -s /root/extras/pseint.tgz ]; then
+    tar xf /root/extras/pseint.tgz -C /opt/
     if [ -d /opt/pseint ]; then
         strip /opt/pseint/wxPSeInt /opt/pseint/pseint 2>/dev/null || true
         cat > /usr/share/applications/pseint.desktop << DESKTOP
@@ -143,14 +143,14 @@ DESKTOP
         log "PSeInt instalado ✅"
     fi
 else
-    log "⚠️ /cdrom/extras/pseint.tgz no encontrado"
+    log "⚠️ /root/extras/pseint.tgz no encontrado"
 fi
 
 # ─────────────────────────────────────────────
 # 13. Instalar Antigravity offline desde ISO
 # ─────────────────────────────────────────────
 log "Instalando Antigravity offline..."
-AGDIR="/cdrom/extras/antigravity"
+AGDIR="/root/extras/antigravity"
 if [ -s "$AGDIR/antigravity-repo-key.gpg" ] && \
    ls "$AGDIR"/antigravity_*.deb 1>/dev/null 2>&1; then
     mkdir -p /etc/apt/keyrings
@@ -161,8 +161,11 @@ if [ -s "$AGDIR/antigravity-repo-key.gpg" ] && \
 https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ \
 antigravity-debian main" > /etc/apt/sources.list.d/antigravity.list
     log "Antigravity instalado ✅"
+    
+    # Limpiar extras copiados para ahorrar espacio
+    rm -rf /root/extras || true
 else
-    log "⚠️ Antigravity no encontrado en /cdrom/extras/"
+    log "⚠️ Antigravity no encontrado en /root/extras/"
 fi
 
 # ─────────────────────────────────────────────

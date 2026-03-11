@@ -1878,9 +1878,12 @@ node-yargs-parser
 notification-daemon
 npm
 ntfs-3g
+ntpsec-ntpdate
+ntpsec-ntpdig
 ocl-icd-libopencl1
 openjdk-21-jre
 openjdk-21-jre-headless
+openntpd
 openrc
 openssh-client
 openssl
@@ -1953,6 +1956,7 @@ python3-lxml
 python3-minimal
 python3-more-itertools
 python3-mutagen
+python3-ntp
 python3-numpy
 python3-numpy-dev
 python3-olefile
