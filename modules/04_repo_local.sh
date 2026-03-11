@@ -21,7 +21,7 @@ WORKDIR="${WORKDIR:-$BASE_DIR/custom_corbex}"
 PKG_CACHE="$BASE_DIR/pkg_cache"
 LOG_FILE="$WORKDIR/logs/04_repo_local.log"
 WARN_LOG="$WORKDIR/logs/warnings.log"
-mkdir -p "$WORKDIR/logs" "$PKG_CACHE"
+mkdir -p "$WORKDIR/logs" "$PKG_CACHE" "$TMP_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 # Manejo de parámetros
@@ -186,6 +186,9 @@ fi
 # 2. Extraer e Indexar Pool1
 EXTRACT_DIR="$WORKDIR/pool1_files"
 POOL1_INDEX="$WORKDIR/pool1_index.txt"
+# Agregar cerca de donde definís EXTRAS_DIR, antes de usarlo:
+TMP_DIR="${TMP_DIR:-$(mktemp -d)}"
+TMPDIR_CREATED=true
 echo "   Extrayendo Pool1.iso..."
 rm -rf "$EXTRACT_DIR" 2>/dev/null
 mkdir -p "$EXTRACT_DIR"
@@ -324,4 +327,5 @@ fi
 echo "✅ Extras offline listos en $EXTRAS_DIR"
 
 rm -rf "$EXTRACT_DIR" "$APT_SANDBOX"
+[ "${TMPDIR_CREATED:-false}" = true ] && rm -rf "$TMP_DIR"
 echo "✅ Módulo 04 finalizado exitosamente."
