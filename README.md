@@ -104,4 +104,4 @@ sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress && sync
 
 ---
 
-*Hecho desde la educación pública para el mundo.*
+*Hecho desde la educación cordobesa para el mundo.*
