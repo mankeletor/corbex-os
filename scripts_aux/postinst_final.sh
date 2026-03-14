@@ -1,6 +1,6 @@
 #!/bin/bash
 # =========================================================
-# postinst_final.sh - Post-instalación (v3.0)
+# postinst_final.sh - Post-instalación (v3.1)
 # CorbexOS - Optimizado para Netbooks (4GB RAM)
 #
 # CONTEXTO: Se ejecuta vía in-target (chroot del target).
@@ -115,32 +115,47 @@ else
 fi
 
 # ─────────────────────────────────────────────
-# 10. Deshabilitar GNOME Keyring / MATE Keyring (✅ chroot)
-#     Evita el diálogo "Set password for default keyring"
-#     en entornos de autologin sin contraseña de sesión.
-#     Estrategia en dos capas:
-#       a) Override global via XDG autostart (afecta a todos los usuarios)
-#       b) Keyring vacío pre-creado para el usuario alumno
+# 10. Configurar GNOME Keyring para autologin (✅ chroot)
+#
+#     ESTRATEGIA (3 capas):
+#       a) Solo deshabilitar gnome-keyring-secrets (el que pide contraseña).
+#          Dejar ssh y pkcs11 activos → el daemon sigue disponible para
+#          apps Electron como Antigravity que usan libsecret.
+#       b) Keyring vacío pre-creado para usuario alumno → desbloqueado
+#          desde el primer arranque sin intervención del usuario.
+#       c) NetworkManager configurado con backend "keyfile" → guarda
+#          contraseñas WiFi en /etc/NetworkManager/system-connections/
+#          en vez de intentar usar el keyring (evita pérdida de redes
+#          guardadas en entornos de autologin).
 # ─────────────────────────────────────────────
-log "Deshabilitando GNOME/MATE keyring..."
+log "Configurando keyring para autologin + Antigravity..."
 
-# a) Deshabilitar autostart global de gnome-keyring
-#    Cubre los tres componentes que pueden disparar el diálogo
+# a) Deshabilitar SOLO el componente que dispara el diálogo de contraseña.
+#    gnome-keyring-ssh y gnome-keyring-pkcs11 se dejan habilitados
+#    para que el daemon quede disponible para libsecret (Antigravity, Chrome, etc.)
 AUTOSTART_DIR="/etc/xdg/autostart"
-for component in gnome-keyring-secrets gnome-keyring-ssh gnome-keyring-pkcs11; do
-    DESKTOP_FILE="${AUTOSTART_DIR}/${component}.desktop"
-    if [ -f "$DESKTOP_FILE" ]; then
-        # Agregar Hidden=true si no existe ya
-        if ! grep -q "^Hidden=true" "$DESKTOP_FILE"; then
-            echo "Hidden=true" >> "$DESKTOP_FILE"
-            log "  ↳ $component deshabilitado vía Hidden=true"
-        fi
+SECRETS_DESKTOP="${AUTOSTART_DIR}/gnome-keyring-secrets.desktop"
+if [ -f "$SECRETS_DESKTOP" ]; then
+    if ! grep -q "^Hidden=true" "$SECRETS_DESKTOP"; then
+        echo "Hidden=true" >> "$SECRETS_DESKTOP"
+        log "  ↳ gnome-keyring-secrets deshabilitado (diálogo suprimido)"
     fi
-done
+else
+    # Si no existe el .desktop, crearlo explícitamente para asegurar
+    # que no se auto-genere en ninguna versión futura del paquete
+    cat > "$SECRETS_DESKTOP" << 'DESKTOP_EOF'
+[Desktop Entry]
+Type=Application
+Name=Certificate and Key Storage
+Hidden=true
+DESKTOP_EOF
+    log "  ↳ gnome-keyring-secrets.desktop creado con Hidden=true"
+fi
+log "  ↳ gnome-keyring-ssh y gnome-keyring-pkcs11 activos (daemon disponible para libsecret)"
 
-# b) Pre-crear keyring vacío y sin contraseña para el usuario alumno
-#    Esto evita el diálogo incluso si gnome-keyring arranca por otra vía
-#    (ej: aplicación que llama a libsecret directamente)
+# b) Pre-crear keyring vacío y desbloqueado para el usuario alumno.
+#    Formato gwkr (sin contraseña) — gnome-keyring lo acepta como desbloqueado
+#    sin pedir contraseña al inicio de sesión.
 KEYRING_DIR="/home/alumno/.local/share/keyrings"
 mkdir -p "$KEYRING_DIR"
 
@@ -159,8 +174,23 @@ chown -R alumno:alumno "$KEYRING_DIR"
 chmod 700 "$KEYRING_DIR"
 chmod 600 "${KEYRING_DIR}/default.keyring"
 chmod 644 "${KEYRING_DIR}/default"
+log "  ↳ Keyring vacío pre-creado para alumno (desbloqueado al iniciar sesión)"
 
-log "Keyring deshabilitado ✅"
+# c) NetworkManager: backend keyfile para no depender del keyring en WiFi
+mkdir -p /etc/NetworkManager/conf.d
+cat > /etc/NetworkManager/conf.d/10-corbex-keyfile.conf << 'NM_EOF'
+# CorbexOS: guardar credenciales WiFi en archivo plano
+# en vez de intentar usar gnome-keyring (que no tiene contraseña
+# en sesiones de autologin y causaría pérdida de redes guardadas).
+[main]
+plugins=keyfile
+
+[keyfile]
+unmanaged-devices=none
+NM_EOF
+log "  ↳ NetworkManager configurado con backend keyfile"
+
+log "Keyring configurado ✅"
 
 # ─────────────────────────────────────────────
 # 11. Limpieza parcial (✅ seguro en chroot)
@@ -171,19 +201,7 @@ apt-get purge -y xterm 2>/dev/null || true
 apt-get clean
 rc-update add openntpd default
 rc-service openntpd start || true
- 
-# ─────────────────────────────────────────────
-# 11b. Fix working directory en sesión X (autologin)
-#      Sin esto el CWD al iniciar sesión es / en vez de $HOME
-# ─────────────────────────────────────────────
-log "Configurando fix working directory Xsession..."
-mkdir -p /etc/X11/Xsession.d
-cat > /etc/X11/Xsession.d/99cd-home << 'XSESSION_EOF'
-# CorbexOS: fix CWD=/ en sesiones de autologin
-if [ "$PWD" = "/" ] && [ -n "$HOME" ] && [ -d "$HOME" ]; then
-    cd "$HOME"
-fi
-XSESSION_EOF
+
 
 # ─────────────────────────────────────────────
 # 12. Instalar PSeInt offline desde ISO
@@ -213,14 +231,10 @@ fi
 log "Instalando Avidemux (Flatpak bundle offline)..."
 AVIDEMUX_BUNDLE="/root/extras/avidemux.flatpak"
 if [ -s "$AVIDEMUX_BUNDLE" ]; then
-    # Asegurar que flatpak esté disponible
     if command -v flatpak >/dev/null; then
-        # Instalar bundle offline sin red
         flatpak install --system --assumeyes --noninteractive \
             "$AVIDEMUX_BUNDLE" 2>&1 | tee -a "$LOG" || \
             log "⚠️ Error instalando Avidemux bundle"
-
-        # Verificar instalación
         if flatpak list | grep -q "avidemux"; then
             log "Avidemux instalado vía Flatpak ✅"
         else
@@ -248,7 +262,7 @@ if [ -s "$AGDIR/antigravity-repo-key.gpg" ] && \
 https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ \
 antigravity-debian main" > /etc/apt/sources.list.d/antigravity.list
     log "Antigravity instalado ✅"
-    
+
     # Limpiar extras copiados para ahorrar espacio
     rm -rf /root/extras || true
 else
@@ -282,7 +296,6 @@ flog() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$FLOG"; }
 # --- Limpieza final (seguro con sistema arrancado) ---
 flog "Limpieza final..."
 apt-get autoremove --purge -y 2>>"$FLOG" || true
-
 apt-get clean
 
 # --- Actualizar Fecha y Hora ---
