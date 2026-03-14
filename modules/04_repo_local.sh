@@ -1,6 +1,6 @@
 #!/bin/bash
 # modules/04_repo_local.sh
-# Lógica Complementaria Robusta v0.99rc25
+# Lógica Complementaria Robusta v0.99rc26
 set -euo pipefail
 
 # Cargar configuración y asegurar BASE_DIR
@@ -166,6 +166,7 @@ if [ -z "$PAQUETES_LISTA_COMPLETA" ]; then
 else
     mapfile -t PAQUETES <<< "$PAQUETES_LISTA_COMPLETA"
 fi
+
 # 0.2 Generación de pkgs_offline.txt (Refactorizado)
 echo "   Generando pkgs_offline.txt consolidado..."
 
@@ -199,7 +200,6 @@ fi
 # 2. Extraer e Indexar Pool1
 EXTRACT_DIR="$WORKDIR/pool1_files"
 POOL1_INDEX="$WORKDIR/pool1_index.txt"
-# Agregar cerca de donde definís EXTRAS_DIR, antes de usarlo:
 echo "   Extrayendo Pool1.iso..."
 rm -rf "$EXTRACT_DIR" 2>/dev/null
 mkdir -p "$EXTRACT_DIR"
@@ -257,9 +257,10 @@ echo "   Iniciando copia/descarga paralela..."
 printf "%s\n" "${PAQUETES[@]}" | xargs -I {} -P "$THREADS" bash -c 'process_pkg "$@"' _ {}
 
 # Verificación de paquetes críticos post-procesamiento
+# Nota: google-chrome-stable se descarga como extra, no via apt — no se verifica aquí
 echo "   Verificando paquetes críticos en pool/local..."
 PAQUETES_FALTANTES=()
-for pkg in chromium firmware-linux-nonfree intel-microcode vlc network-manager; do
+for pkg in firmware-linux-nonfree intel-microcode vlc network-manager; do
     if ! ls "$ISO_HOME/pool/local/${pkg}_"*.deb 1>/dev/null 2>&1; then
         PAQUETES_FALTANTES+=("$pkg")
     fi
@@ -299,8 +300,9 @@ done)
 EOF
 
 # ─────────────────────────────────────────────
-# EXTRAS OFFLINE: PSeInt + Antigravity
-# Se descargan en build time y se incluyen en la ISO
+# EXTRAS OFFLINE: PSeInt + Antigravity + Avidemux + Google Chrome
+# Se descargan en build time y se incluyen en la ISO.
+# El postinst los instala desde /root/extras/ dentro del chroot.
 # ─────────────────────────────────────────────
 EXTRAS_DIR="$ISO_HOME/extras"
 mkdir -p "$EXTRAS_DIR/antigravity"
@@ -316,6 +318,7 @@ if [ ! -s "$PSEINT_FILE" ]; then
         echo "⚠️ No se pudo descargar PSeInt" >> "$WARN_LOG"
         rm -f "$PSEINT_FILE"
     }
+    [ -s "$PSEINT_FILE" ] && echo "   ✅ PSeInt descargado ($(du -sh "$PSEINT_FILE" | cut -f1))"
 else
     echo "   PSeInt ya en cache, reutilizando ✅"
 fi
@@ -353,14 +356,11 @@ fi
 AVIDEMUX_BUNDLE="$EXTRAS_DIR/avidemux.flatpak"
 if [ ! -s "$AVIDEMUX_BUNDLE" ]; then
     echo "   Descargando Avidemux como Flatpak bundle offline..."
-    # Necesita flatpak + flathub configurado en el sistema de build
     if command -v flatpak >/dev/null 2>&1; then
-        # Instalar temporalmente para generar el bundle
         flatpak remote-add --user --if-not-exists flathub \
             https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
         flatpak install --user --assumeyes --noninteractive flathub \
             org.avidemux.Avidemux 2>/dev/null || true
-        # Crear bundle descargable
         flatpak build-bundle \
             "$HOME/.local/share/flatpak/repo" \
             "$AVIDEMUX_BUNDLE" \
@@ -368,9 +368,8 @@ if [ ! -s "$AVIDEMUX_BUNDLE" ]; then
             echo "⚠️ No se pudo crear bundle de Avidemux" >> "$WARN_LOG"
             rm -f "$AVIDEMUX_BUNDLE"
         }
-        if [ -s "$AVIDEMUX_BUNDLE" ]; then
+        [ -s "$AVIDEMUX_BUNDLE" ] && \
             echo "   ✅ Avidemux bundle generado ($(du -sh "$AVIDEMUX_BUNDLE" | cut -f1))"
-        fi
     else
         echo "⚠️ flatpak no disponible en sistema de build, omitiendo Avidemux" >> "$WARN_LOG"
     fi
@@ -378,6 +377,26 @@ else
     echo "   Avidemux bundle ya en cache, reutilizando ✅"
 fi
 
+# --- Google Chrome ---
+# Se descarga el .deb oficial de Google directamente.
+# Al instalarse vía dpkg agrega automáticamente su propio repo en
+# /etc/apt/sources.list.d/google-chrome.list → los alumnos reciben
+# actualizaciones automáticas con apt upgrade.
+CHROME_DEB="$EXTRAS_DIR/google-chrome-stable.deb"
+if [ ! -s "$CHROME_DEB" ]; then
+    echo "   Descargando Google Chrome estable..."
+    wget --tries=3 --timeout=120 \
+        -O "$CHROME_DEB" \
+        "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" || {
+        echo "⚠️ No se pudo descargar Google Chrome" >> "$WARN_LOG"
+        rm -f "$CHROME_DEB"
+    }
+    if [ -s "$CHROME_DEB" ]; then
+        echo "   ✅ Google Chrome descargado ($(du -sh "$CHROME_DEB" | cut -f1))"
+    fi
+else
+    echo "   Google Chrome ya en cache, reutilizando ✅"
+fi
 
 echo "✅ Extras offline listos en $EXTRAS_DIR"
 

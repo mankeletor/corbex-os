@@ -1,6 +1,6 @@
 #!/bin/bash
 # =========================================================
-# postinst_final.sh - Post-instalación (v3.1)
+# postinst_final.sh - Post-instalación (v3.2)
 # CorbexOS - Optimizado para Netbooks (4GB RAM)
 #
 # CONTEXTO: Se ejecuta vía in-target (chroot del target).
@@ -120,7 +120,7 @@ fi
 #     ESTRATEGIA (3 capas):
 #       a) Solo deshabilitar gnome-keyring-secrets (el que pide contraseña).
 #          Dejar ssh y pkcs11 activos → el daemon sigue disponible para
-#          apps Electron como Antigravity que usan libsecret.
+#          apps Electron como Antigravity y Chrome que usan libsecret.
 #       b) Keyring vacío pre-creado para usuario alumno → desbloqueado
 #          desde el primer arranque sin intervención del usuario.
 #       c) NetworkManager configurado con backend "keyfile" → guarda
@@ -128,7 +128,7 @@ fi
 #          en vez de intentar usar el keyring (evita pérdida de redes
 #          guardadas en entornos de autologin).
 # ─────────────────────────────────────────────
-log "Configurando keyring para autologin + Antigravity..."
+log "Configurando keyring para autologin + Antigravity + Chrome..."
 
 # a) Deshabilitar SOLO el componente que dispara el diálogo de contraseña.
 #    gnome-keyring-ssh y gnome-keyring-pkcs11 se dejan habilitados
@@ -202,6 +202,47 @@ apt-get clean
 rc-update add openntpd default
 rc-service openntpd start || true
 
+# ─────────────────────────────────────────────
+# 11b. Fix working directory en sesión X (autologin)
+#      Sin esto el CWD al iniciar sesión es / en vez de $HOME
+# ─────────────────────────────────────────────
+log "Configurando fix working directory Xsession..."
+mkdir -p /etc/X11/Xsession.d
+cat > /etc/X11/Xsession.d/99cd-home << 'XSESSION_EOF'
+# CorbexOS: fix CWD=/ en sesiones de autologin
+if [ "$PWD" = "/" ] && [ -n "$HOME" ] && [ -d "$HOME" ]; then
+    cd "$HOME"
+fi
+XSESSION_EOF
+
+# ─────────────────────────────────────────────
+# 11c. Fix PATH — agregar /usr/sbin y /sbin (✅ chroot)
+#      En Devuan/Debian moderno sbin está fusionado en /usr/sbin
+#      pero no siempre aparece en el PATH del usuario normal.
+#      profile.d  → aplica a shells interactivos de login.
+#      /etc/environment → aplica a cualquier sesión vía PAM
+#                         (incluyendo autologin de LightDM).
+# ─────────────────────────────────────────────
+log "Configurando PATH con /usr/sbin y /sbin..."
+cat > /etc/profile.d/corbex-path.sh << 'PATH_EOF'
+# CorbexOS: asegurar /usr/sbin y /sbin en PATH para todos los usuarios
+case ":$PATH:" in
+    *:/usr/sbin:*) ;;
+    *) export PATH="$PATH:/usr/sbin" ;;
+esac
+case ":$PATH:" in
+    *:/sbin:*) ;;
+    *) export PATH="$PATH:/sbin" ;;
+esac
+PATH_EOF
+chmod 644 /etc/profile.d/corbex-path.sh
+
+# Aplica también a sesiones X vía PAM (autologin LightDM)
+if ! grep -q "/usr/sbin" /etc/environment 2>/dev/null; then
+    echo 'PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/sbin:/sbin' \
+        >> /etc/environment
+fi
+log "PATH configurado ✅"
 
 # ─────────────────────────────────────────────
 # 12. Instalar PSeInt offline desde ISO
@@ -248,6 +289,26 @@ else
 fi
 
 # ─────────────────────────────────────────────
+# 12c. Instalar Google Chrome offline desde ISO
+#      Al instalarse vía dpkg, Chrome agrega automáticamente su repo
+#      en /etc/apt/sources.list.d/google-chrome.list → los alumnos
+#      reciben actualizaciones automáticas con apt upgrade.
+# ─────────────────────────────────────────────
+log "Instalando Google Chrome offline..."
+CHROME_DEB="/root/extras/google-chrome-stable.deb"
+if [ -s "$CHROME_DEB" ]; then
+    DEBIAN_FRONTEND=noninteractive dpkg -i "$CHROME_DEB" 2>/dev/null || \
+        apt-get install -f -y 2>/dev/null || true
+    if dpkg -l google-chrome-stable 2>/dev/null | grep -q "^ii"; then
+        log "Google Chrome instalado ✅"
+    else
+        log "⚠️ Google Chrome no pudo instalarse correctamente"
+    fi
+else
+    log "⚠️ /root/extras/google-chrome-stable.deb no encontrado"
+fi
+
+# ─────────────────────────────────────────────
 # 13. Instalar Antigravity offline desde ISO
 # ─────────────────────────────────────────────
 log "Instalando Antigravity offline..."
@@ -262,12 +323,14 @@ if [ -s "$AGDIR/antigravity-repo-key.gpg" ] && \
 https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ \
 antigravity-debian main" > /etc/apt/sources.list.d/antigravity.list
     log "Antigravity instalado ✅"
-
-    # Limpiar extras copiados para ahorrar espacio
-    rm -rf /root/extras || true
 else
     log "⚠️ Antigravity no encontrado en /root/extras/"
 fi
+
+# Limpiar directorio extras — al final de TODAS las instalaciones
+# para no cortar el acceso a otros extras si una sección falla.
+rm -rf /root/extras || true
+log "Directorio extras limpiado ✅"
 
 # ─────────────────────────────────────────────
 # 14. Crear servicio FIRSTRUN (OpenRC)
