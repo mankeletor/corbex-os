@@ -208,6 +208,32 @@ else
 fi
 
 # ─────────────────────────────────────────────
+# 12b. Instalar Avidemux offline desde bundle Flatpak
+# ─────────────────────────────────────────────
+log "Instalando Avidemux (Flatpak bundle offline)..."
+AVIDEMUX_BUNDLE="/root/extras/avidemux.flatpak"
+if [ -s "$AVIDEMUX_BUNDLE" ]; then
+    # Asegurar que flatpak esté disponible
+    if command -v flatpak >/dev/null; then
+        # Instalar bundle offline sin red
+        flatpak install --system --assumeyes --noninteractive \
+            "$AVIDEMUX_BUNDLE" 2>&1 | tee -a "$LOG" || \
+            log "⚠️ Error instalando Avidemux bundle"
+
+        # Verificar instalación
+        if flatpak list | grep -q "avidemux"; then
+            log "Avidemux instalado vía Flatpak ✅"
+        else
+            log "⚠️ Avidemux no aparece en flatpak list tras instalación"
+        fi
+    else
+        log "⚠️ flatpak no disponible en chroot, omitiendo Avidemux"
+    fi
+else
+    log "⚠️ /root/extras/avidemux.flatpak no encontrado"
+fi
+
+# ─────────────────────────────────────────────
 # 13. Instalar Antigravity offline desde ISO
 # ─────────────────────────────────────────────
 log "Instalando Antigravity offline..."

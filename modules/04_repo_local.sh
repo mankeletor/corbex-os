@@ -128,6 +128,8 @@ PAQUETES_CRITICOS=(
     mate-desktop-environment-extras
     mate-applets
     flatpak
+    xdg-desktop-portal
+    xdg-desktop-portal-gtk
     geogebra
     curl
     vlc
@@ -346,6 +348,36 @@ if [ -s "$GPG_FILE" ] && ! ls "$EXTRAS_DIR/antigravity/antigravity_"*.deb 1>/dev
         echo "⚠️ No se pudo descargar .deb de Antigravity" >> "$WARN_LOG"
     rm -f "$TMP_DIR/antigravity-build.list"
 fi
+
+# --- Avidemux Flatpak Bundle ---
+AVIDEMUX_BUNDLE="$EXTRAS_DIR/avidemux.flatpak"
+if [ ! -s "$AVIDEMUX_BUNDLE" ]; then
+    echo "   Descargando Avidemux como Flatpak bundle offline..."
+    # Necesita flatpak + flathub configurado en el sistema de build
+    if command -v flatpak >/dev/null 2>&1; then
+        # Instalar temporalmente para generar el bundle
+        flatpak remote-add --user --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+        flatpak install --user --assumeyes --noninteractive flathub \
+            org.avidemux.Avidemux 2>/dev/null || true
+        # Crear bundle descargable
+        flatpak build-bundle \
+            "$HOME/.local/share/flatpak/repo" \
+            "$AVIDEMUX_BUNDLE" \
+            org.avidemux.Avidemux 2>/dev/null || {
+            echo "⚠️ No se pudo crear bundle de Avidemux" >> "$WARN_LOG"
+            rm -f "$AVIDEMUX_BUNDLE"
+        }
+        if [ -s "$AVIDEMUX_BUNDLE" ]; then
+            echo "   ✅ Avidemux bundle generado ($(du -sh "$AVIDEMUX_BUNDLE" | cut -f1))"
+        fi
+    else
+        echo "⚠️ flatpak no disponible en sistema de build, omitiendo Avidemux" >> "$WARN_LOG"
+    fi
+else
+    echo "   Avidemux bundle ya en cache, reutilizando ✅"
+fi
+
 
 echo "✅ Extras offline listos en $EXTRAS_DIR"
 
