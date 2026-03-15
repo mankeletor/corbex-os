@@ -162,7 +162,7 @@ col-26-width=133
 
 [org/mate/terminal/profiles/default]
 use-custom-default-size=true
-default-show-menubar=false
+default-show-menubar=true
 working-directory='/home/alumno'
 allow-bold=false
 background-color='#000000000000'

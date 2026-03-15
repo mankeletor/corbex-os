@@ -18,7 +18,6 @@ build-essential
 busybox
 celluloid
 cheese
-chromium
 console-setup
 coreutils
 cpio

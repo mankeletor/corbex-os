@@ -353,29 +353,23 @@ if [ -s "$GPG_FILE" ] && ! ls "$EXTRAS_DIR/antigravity/antigravity_"*.deb 1>/dev
     rm -f "$TMP_DIR/antigravity-build.list"
 fi
 
-# --- Avidemux Flatpak Bundle ---
-AVIDEMUX_BUNDLE="$EXTRAS_DIR/avidemux.flatpak"
-if [ ! -s "$AVIDEMUX_BUNDLE" ]; then
-    echo "   Descargando Avidemux como Flatpak bundle offline..."
-    if command -v flatpak >/dev/null 2>&1; then
-        flatpak remote-add --user --if-not-exists flathub \
-            https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
-        flatpak install --user --assumeyes --noninteractive flathub \
-            org.avidemux.Avidemux 2>/dev/null || true
-        flatpak build-bundle \
-            "$HOME/.local/share/flatpak/repo" \
-            "$AVIDEMUX_BUNDLE" \
-            org.avidemux.Avidemux 2>/dev/null || {
-            echo "⚠️ No se pudo crear bundle de Avidemux" >> "$WARN_LOG"
-            rm -f "$AVIDEMUX_BUNDLE"
-        }
-        [ -s "$AVIDEMUX_BUNDLE" ] && \
-            echo "   ✅ Avidemux bundle generado ($(du -sh "$AVIDEMUX_BUNDLE" | cut -f1))"
-    else
-        echo "⚠️ flatpak no disponible en sistema de build, omitiendo Avidemux" >> "$WARN_LOG"
+# --- Avidemux AppImage (self-contained, no Flatpak runtime needed) ---
+AVIDEMUX_APPIMAGE="$EXTRAS_DIR/avidemux.appimage"
+AVIDEMUX_VERSION="2.8.0"
+if [ ! -s "$AVIDEMUX_APPIMAGE" ]; then
+    echo "   Descargando Avidemux ${AVIDEMUX_VERSION} AppImage..."
+    wget --tries=3 --timeout=120 --content-disposition \
+        -O "$AVIDEMUX_APPIMAGE" \
+        "https://sourceforge.net/projects/avidemux/files/avidemux/${AVIDEMUX_VERSION}/avidemux_${AVIDEMUX_VERSION}.appImage/download" || {
+        echo "⚠️ No se pudo descargar Avidemux AppImage" >> "$WARN_LOG"
+        rm -f "$AVIDEMUX_APPIMAGE"
+    }
+    if [ -s "$AVIDEMUX_APPIMAGE" ]; then
+        chmod +x "$AVIDEMUX_APPIMAGE"
+        echo "   ✅ Avidemux AppImage descargado ($(du -sh "$AVIDEMUX_APPIMAGE" | cut -f1))"
     fi
 else
-    echo "   Avidemux bundle ya en cache, reutilizando ✅"
+    echo "   Avidemux AppImage ya en cache, reutilizando ✅"
 fi
 
 # --- Google Chrome ---

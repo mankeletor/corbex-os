@@ -48,20 +48,12 @@ if ! grep -q "vm.swappiness" /etc/sysctl.conf; then
     echo "vm.swappiness=10" >> /etc/sysctl.conf
 fi
 
-# ─────────────────────────────────────────────
-# 4. Deshabilitar servicios innecesarios (✅ OpenRC)
-# ─────────────────────────────────────────────
-#if command -v rc-update >/dev/null; then
-#    for s in bluetooth cups; do
-#        rc-update del $s default 2>/dev/null || true
-#    done
-#fi
 
 # ─────────────────────────────────────────────
 # 5. Escritorio MATE - dconf global (✅ chroot)
 # ─────────────────────────────────────────────
 log "Configurando MATE/dconf..."
-mkdir -p /etc/dconf/profile /etc/dconf/db/local.d
+mkdir -p /etc/dconf/profile /etc/dconf/db/local.d /etc/dconf/db/locks
 
 cat > /etc/dconf/profile/user << 'EOF'
 user-db:user
@@ -70,6 +62,19 @@ EOF
 
 if [ -f /root/corbex.dconf ]; then
     cp /root/corbex.dconf /etc/dconf/db/local.d/01-corbex-custom
+    
+    # BLOQUEAR las claves de terminal para que el usuario no las pueda cambiar
+    # Esto fuerza el uso del perfil system-wide
+    cat > /etc/dconf/db/locks/01-corbex-terminal << 'LOCKS'
+    /org/mate/terminal/profiles/default/background-darkness
+    /org/mate/terminal/profiles/default/background-type
+    /org/mate/terminal/profiles/default/background-color
+    /org/mate/terminal/profiles/default/foreground-color
+    /org/mate/terminal/profiles/default/use-theme-colors
+    /org/mate/terminal/profiles/default/working-directory
+    /org/mate/terminal/profiles/default/default-show-menubar
+    LOCKS
+    
     dconf update || log "⚠️ Error en dconf update"
 fi
 
@@ -273,8 +278,8 @@ log "Instalando Avidemux (Flatpak bundle offline)..."
 AVIDEMUX_BUNDLE="/root/extras/avidemux.flatpak"
 if [ -s "$AVIDEMUX_BUNDLE" ]; then
     if command -v flatpak >/dev/null; then
-        flatpak install --system --assumeyes --noninteractive \
-            "$AVIDEMUX_BUNDLE" 2>&1 | tee -a "$LOG" || \
+        flatpak install --user --assumeyes --noninteractive \
+            --no-pull "$AVIDEMUX_BUNDLE" 2>&1 | tee -a "$LOG" || \
             log "⚠️ Error instalando Avidemux bundle"
         if flatpak list | grep -q "avidemux"; then
             log "Avidemux instalado vía Flatpak ✅"

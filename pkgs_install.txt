@@ -10,7 +10,6 @@ build-essential
 busybox
 celluloid
 cheese
-chromium
 console-setup
 coreutils
 cpio
@@ -115,6 +114,7 @@ task-mate-desktop
 tasksel
 task-spanish
 tree
+ttf-mscorefonts-installer
 tzdata
 unzip
 usb-modeswitch
