@@ -73,7 +73,7 @@ if [ -f /root/corbex.dconf ]; then
     /org/mate/terminal/profiles/default/use-theme-colors
     /org/mate/terminal/profiles/default/working-directory
     /org/mate/terminal/profiles/default/default-show-menubar
-    LOCKS
+LOCKS
     
     dconf update || log "⚠️ Error en dconf update"
 fi
@@ -207,18 +207,6 @@ apt-get clean
 rc-update add openntpd default
 rc-service openntpd start || true
 
-# ─────────────────────────────────────────────
-# 11b. Fix working directory en sesión X (autologin)
-#      Sin esto el CWD al iniciar sesión es / en vez de $HOME
-# ─────────────────────────────────────────────
-log "Configurando fix working directory Xsession..."
-mkdir -p /etc/X11/Xsession.d
-cat > /etc/X11/Xsession.d/99cd-home << 'XSESSION_EOF'
-# CorbexOS: fix CWD=/ en sesiones de autologin
-if [ "$PWD" = "/" ] && [ -n "$HOME" ] && [ -d "$HOME" ]; then
-    cd "$HOME"
-fi
-XSESSION_EOF
 
 # ─────────────────────────────────────────────
 # 11c. Fix PATH — agregar /usr/sbin y /sbin (✅ chroot)
@@ -272,25 +260,39 @@ else
 fi
 
 # ─────────────────────────────────────────────
-# 12b. Instalar Avidemux offline desde bundle Flatpak
+# 12b. Instalar Avidemux desde AppImage
 # ─────────────────────────────────────────────
-log "Instalando Avidemux (Flatpak bundle offline)..."
-AVIDEMUX_BUNDLE="/root/extras/avidemux.flatpak"
-if [ -s "$AVIDEMUX_BUNDLE" ]; then
-    if command -v flatpak >/dev/null; then
-        flatpak install --user --assumeyes --noninteractive \
-            --no-pull "$AVIDEMUX_BUNDLE" 2>&1 | tee -a "$LOG" || \
-            log "⚠️ Error instalando Avidemux bundle"
-        if flatpak list | grep -q "avidemux"; then
-            log "Avidemux instalado vía Flatpak ✅"
-        else
-            log "⚠️ Avidemux no aparece en flatpak list tras instalación"
-        fi
-    else
-        log "⚠️ flatpak no disponible en chroot, omitiendo Avidemux"
+log "Instalando Avidemux (AppImage)..."
+AVIDEMUX_APPIMAGE="/root/extras/avidemux.appimage"
+if [ -s "$AVIDEMUX_APPIMAGE" ]; then
+    mkdir -p /opt/avidemux
+    cp "$AVIDEMUX_APPIMAGE" /opt/avidemux/avidemux.appimage
+    chmod +x /opt/avidemux/avidemux.appimage
+    
+    # Crear lanzador .desktop
+    cat > /usr/share/applications/avidemux.desktop << DESKTOP
+[Desktop Entry]
+Name=Avidemux
+Comment=Editor de video multi-propósito
+Exec=/opt/avidemux/avidemux.appimage
+Icon=/opt/avidemux/avidemux.png
+Type=Application
+Categories=AudioVideo;Video;AudioVideoEditing;
+Terminal=false
+DESKTOP
+    
+    # Descargar icono genérico si no existe
+    if [ ! -f /opt/avidemux/avidemux.png ]; then
+        # Usar icono de sistema como fallback
+        ln -s /usr/share/icons/hicolor/48x48/apps/applications-multimedia.png /opt/avidemux/avidemux.png 2>/dev/null || true
     fi
+    
+    # Crear symlink en /usr/local/bin para lanzar desde terminal
+    ln -sf /opt/avidemux/avidemux.appimage /usr/local/bin/avidemux
+    
+    log "Avidemux instalado vía AppImage ✅"
 else
-    log "⚠️ /root/extras/avidemux.flatpak no encontrado"
+    log "⚠️ /root/extras/avidemux.appimage no encontrado"
 fi
 
 # ─────────────────────────────────────────────
@@ -350,36 +352,72 @@ mkdir -p /usr/local/sbin
 cat > /usr/local/sbin/corbex-firstrun.sh << 'FIRSTRUN_SCRIPT'
 #!/bin/bash
 # =========================================================
-# corbex-firstrun.sh - Tareas de primer arranque
-# Se ejecuta una sola vez como servicio OpenRC y se
-# auto-deshabilita al finalizar.
-# No requiere red - solo limpieza final y post-config.
+# corbex-firstrun.sh - Tareas de primer arranque (v2.0)
+# CorbexOS - Se ejecuta una sola vez como servicio OpenRC
 # =========================================================
-set -x
+set -e  # Fail on error, pero con manejo en cada comando
+
 FLOG="/var/log/corbex-firstrun.log"
-echo "$(date '+%Y-%m-%d %H:%M:%S') - FIRSTRUN INICIADO" > "$FLOG"
+exec > >(tee -a "$FLOG") 2>&1
 
-flog() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$FLOG"; }
+flog() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 
-# --- Limpieza final (seguro con sistema arrancado) ---
-flog "Limpieza final..."
-apt-get autoremove --purge -y 2>>"$FLOG" || true
-apt-get clean
+flog "=== CorbexOS Firstrun iniciado ==="
+flog "Version: $(cat /etc/corbex-version 2>/dev/null || echo 'unknown')"
+flog "Hardware: $(dmidecode -s system-product-name 2>/dev/null || echo 'unknown')"
 
-# --- Actualizar Fecha y Hora ---
-flog "Sincronizando reloj por NTP..."
-if command -v ntpsec-ntpdate >/dev/null; then
-    ntpsec-ntpdate -u pool.ntp.org || flog "⚠️ Falló sincronización de hora"
-    hwclock --systohc || true
+# --- 1. Configurar terminal para usuario alumno ---
+flog "Configurando perfil de MATE Terminal..."
+if id alumno &>/dev/null; then
+    # Esperar a que D-Bus de sistema esté listo
+    sleep 2
+    
+    # Configurar dconf como alumno vía dbus-launch
+    su - alumno -c 'export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id - u)/bus; dconf write /org/mate/terminal/profiles/default/background-darkness 0.85' 2>/dev/null || \
+        flog "⚠️ No se pudo configurar background-darkness"
+    
+    su - alumno -c 'export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id - u)/bus; dconf write /org/mate/terminal/profiles/default/background-type "transparent"' 2>/dev/null || true
+    
+    su - alumno -c 'export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id - u)/bus; dconf write /org/mate/terminal/profiles/default/working-directory "/home/alumno"' 2>/dev/null || true
+    
+    su - alumno -c 'export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id - u)/bus; dconf write /org/mate/terminal/profiles/default/default-show-menubar true' 2>/dev/null || true
+    
+    flog "Terminal configurada ✅"
 else
-    flog "⚠️ ntpdate no instalado"
+    flog "⚠️ Usuario alumno no existe"
 fi
 
-# --- Auto-deshabilitarse ---
-flog "Deshabilitando servicio firstrun..."
+# --- 2. Limpieza de paquetes (con timeout) ---
+flog "Limpieza de paquetes..."
+export DEBIAN_FRONTEND=noninteractive
+export APT_LISTCHANGES_FRONTEND=none
+
+# Configurar timeout corto para apt
+cat > /etc/apt/apt.conf.d/99corbex-firstrun << 'APTCONF'
+Acquire::Timeout "30";
+Acquire::Retries "1";
+APT::Get::Assume-Yes "true";
+APTCONF
+
+apt-get autoremove --purge -y 2>/dev/null || flog "⚠️ autoremove falló (posible sin red)"
+apt-get clean
+rm -f /etc/apt/apt.conf.d/99corbex-firstrun
+
+# --- 3. Sincronización de hora (background, no bloqueante) ---
+(
+    flog "Sincronizando hora vía NTP..."
+    if command -v ntpsec-ntpdate >/dev/null; then
+        timeout 15 ntpsec-ntpdate -u pool.ntp.org 2>/dev/null && hwclock --systohc 2>/dev/null && flog "Hora sincronizada ✅" || flog "⚠️ NTP falló o timeout"
+    else
+        flog "⚠️ ntpsec-ntpdate no disponible"
+    fi
+) &
+
+# --- 4. Auto-deshabilitar servicio ---
+flog "Deshabilitando firstrun..."
 rc-update del corbex-firstrun default 2>/dev/null || true
 
-flog "FIRSTRUN FINALIZADO OK"
+flog "=== Firstrun completado ==="
 exit 0
 FIRSTRUN_SCRIPT
 chmod +x /usr/local/sbin/corbex-firstrun.sh
