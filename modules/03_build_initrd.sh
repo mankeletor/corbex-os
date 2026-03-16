@@ -61,8 +61,9 @@ cp "$BASE_DIR/scripts_aux/postinst_final.sh" ./postinst.sh
 cp "$BASE_DIR/templates/rc.conf" ./rc.conf
 cp "$BASE_DIR/templates/corbex.dconf" ./corbex.dconf
 cp "$BASE_DIR/pkgs_install.txt" ./pkgs_install.txt
-cp "$BASE_DIR/modules/3.5_build_source.sh" ./build_source.sh
-chmod +x ./build_source.sh
+mkdir -p usr/local/sbin
+cp "$BASE_DIR/modules/3.5_build_source.sh" usr/local/sbin/corbex-build-sources.sh
+chmod +x usr/local/sbin/corbex-build-sources.sh
 
 # --- NUEVO: Script de intervención radical (finish-install) ---
 # Optimizado para RAM: solo lanza apt tras asegurar que el target tiene el repo local

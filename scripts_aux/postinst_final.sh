@@ -36,8 +36,9 @@ log "Generando sources.list..."
 echo "deb file:///cdrom excalibur main contrib non-free non-free-firmware local" > /etc/apt/sources.list
 
 # Intentar generar entradas del mirror si hay red
-if [ -x /root/build_source.sh ]; then
-    SOURCES=$(/root/build_source.sh "dev1mir.registrationsplus.net" 2>/dev/null) || true
+if [ -x /usr/local/sbin/corbex-build-sources.sh ]; then
+    SOURCES=$(/usr/local/sbin/corbex-build-sources.sh \
+    "dev1mir.registrationsplus.net" 2>/dev/null) || true
     if [ -n "$SOURCES" ]; then
         echo "$SOURCES" >> /etc/apt/sources.list
         log "Mirror remoto agregado ✅"
