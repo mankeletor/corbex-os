@@ -115,7 +115,6 @@ fi
 # Inyección de paquetes CRÍTICOS (Declarativo)
 PAQUETES_CRITICOS=(
     sudo
-    ttf-mscorefonts-installer
     wget
     ntpsec-ntpdate
     openntpd
