@@ -34,7 +34,9 @@ else
 fi
 
 # Asegurar paquetes base críticos
-for critical in mate-desktop-environment-core mate-terminal network-manager firmware-linux-nonfree bash-completion sudo; do
+for critical in mate-desktop-environment-core mate-terminal \
+network-manager firmware-linux-nonfree bash-completion sudo wpasupplicant \
+wireless-tools iw rfkill; do
     if [[ ! " ${PAQUETES[@]} " =~ " $critical " ]]; then
         PAQUETES+=("$critical")
     fi
