@@ -28,49 +28,6 @@ locale-gen es_AR.UTF-8
 update-locale LANG=es_AR.UTF-8
 
 # ─────────────────────────────────────────────
-# 1b. Generar sources.list dinámico
-#     Estructura:
-#       /etc/apt/sources.list          → CDROM (siempre disponible)
-#       /etc/apt/sources.list.d/mirrors.list → mirror remoto (si hay red)
-# ─────────────────────────────────────────────
-log "Generando sources.list y mirrors.list..."
-
-# CDROM siempre en sources.list (funciona sin red)
-echo "deb file:///cdrom excalibur main contrib non-free non-free-firmware local" > /etc/apt/sources.list
-
-# Crear directorio sources.list.d si no existe
-mkdir -p /etc/apt/sources.list.d
-
-# Generar mirrors.list desde corbex-build-sources.sh si hay red
-if [ -x /usr/local/sbin/corbex-build-sources.sh ]; then
-    SOURCES=$(/usr/local/sbin/corbex-build-sources.sh \
-    "dev1mir.registrationsplus.net" 2>/dev/null) || true
-    if [ -n "$SOURCES" ]; then
-        # Escribir a mirrors.list (separado de sources.list)
-        cat > /etc/apt/sources.list.d/mirrors.list << MIRRORS_EOF
-# CorbexOS - Mirror remoto generado automáticamente por corbex-build-sources
-# Generado: $(date '+%Y-%m-%d %H:%M:%S')
-$SOURCES
-MIRRORS_EOF
-        log "mirrors.list generado con mirror remoto ✅"
-    else
-        # Sin red: crear mirrors.list vacío con comentario para que no rompa apt
-        cat > /etc/apt/sources.list.d/mirrors.list << MIRRORS_EOF
-# CorbexOS - Mirror remoto (sin red en instalación, configúrese manualmente)
-# Ejecutar: corbex-build-sources dev1mir.registrationsplus.net
-MIRRORS_EOF
-        log "⚠️ Sin red — mirrors.list creado vacío (solo comentarios)"
-    fi
-else
-    cat > /etc/apt/sources.list.d/mirrors.list << MIRRORS_EOF
-# CorbexOS - Mirror remoto (corbex-build-sources no encontrado)
-# Ejecutar: /usr/local/sbin/corbex-build-sources.sh dev1mir.registrationsplus.net
-MIRRORS_EOF
-    log "⚠️ corbex-build-sources.sh no encontrado — mirrors.list creado vacío"
-fi
-
-
-# ─────────────────────────────────────────────
 # 2. Paquetes manuales (✅ repos ya configurados)
 # ─────────────────────────────────────────────
 if [ -f /root/pkgs_install.txt ]; then
@@ -346,59 +303,15 @@ fi
 #      directamente desde squashfs-root.
 # ─────────────────────────────────────────────
 log "Instalando Avidemux (AppImage extraído)..."
-AVIDEMUX_APPIMAGE="/root/extras/avidemux.appimage"
+AVIDEMUX_APPIMAGE="/root/extras/avidemux_2.8.1.appImage"
 if [ -s "$AVIDEMUX_APPIMAGE" ]; then
-    mkdir -p /opt/avidemux
-    cp "$AVIDEMUX_APPIMAGE" /opt/avidemux/avidemux.appimage
-    chmod +x /opt/avidemux/avidemux.appimage
-    
-    # Extraer AppImage (no requiere FUSE) en /opt/avidemux/squashfs-root/
-    cd /opt/avidemux
-    /opt/avidemux/avidemux.appimage --appimage-extract 2>/dev/null || \
-        log "⚠️ avidemux --appimage-extract falló"
-    cd /
-    
-    # Determinar el binario real dentro de squashfs-root
-    AVIDEMUX_BIN=""
-    for candidate in avidemuxJobServer avidemux3_qt5 avidemux3_jobs_qt5 AppRun; do
-        if [ -x "/opt/avidemux/squashfs-root/$candidate" ]; then
-            AVIDEMUX_BIN="/opt/avidemux/squashfs-root/$candidate"
-            break
-        fi
-    done
-    
-    # Wrapper que configura LD_LIBRARY_PATH y lanza el binario extraído
-    cat > /usr/local/bin/avidemux << 'WRAPPER'
-#!/bin/bash
-export LD_LIBRARY_PATH="/opt/avidemux/squashfs-root/usr/lib:/opt/avidemux/squashfs-root/lib:${LD_LIBRARY_PATH}"
-exec /opt/avidemux/squashfs-root/AppRun "$@"
-WRAPPER
-    chmod +x /usr/local/bin/avidemux
-    
-    # Extraer icono desde squashfs-root si existe
-    ICON_SRC=$(find /opt/avidemux/squashfs-root -name 'avidemux*.png' -o -name '*.png' 2>/dev/null | head -1)
-    if [ -n "$ICON_SRC" ]; then
-        cp "$ICON_SRC" /opt/avidemux/avidemux.png 2>/dev/null || true
-    else
-        ln -sf /usr/share/icons/hicolor/48x48/apps/applications-multimedia.png \
-            /opt/avidemux/avidemux.png 2>/dev/null || true
-    fi
-    
-    # Crear lanzador .desktop apuntando al wrapper
-    cat > /usr/share/applications/avidemux.desktop << DESKTOP
-[Desktop Entry]
-Name=Avidemux
-Comment=Editor de video multi-propósito
-Exec=/usr/local/bin/avidemux
-Icon=/opt/avidemux/avidemux.png
-Type=Application
-Categories=AudioVideo;Video;AudioVideoEditing;
-Terminal=false
-DESKTOP
-    
-    log "Avidemux instalado (AppImage extraído) ✅"
+    cp "$AVIDEMUX_APPIMAGE" /home/alumno/Desktop/
+    chown alumno:alumno /home/alumno/Desktop/avidemux_2.8.1.appImage
+    chmod +x /home/alumno/Desktop/avidemux_2.8.1.appImage
+
+    log "Avidemux instalado ✅"
 else
-    log "⚠️ /root/extras/avidemux.appimage no encontrado"
+    log "⚠️ /root/extras/avidemux_2.8.1.appImage no encontrado"
 fi
 
 # ─────────────────────────────────────────────
