@@ -353,8 +353,8 @@ if [ -s "$GPG_FILE" ] && ! ls "$EXTRAS_DIR/antigravity/antigravity_"*.deb 1>/dev
 fi
 
 # --- Avidemux AppImage (self-contained, no Flatpak runtime needed) ---
-AVIDEMUX_APPIMAGE="$EXTRAS_DIR/avidemux_${AVIDEMUX_VERSION}.appImage"
 AVIDEMUX_VERSION="2.8.1"
+AVIDEMUX_APPIMAGE="$EXTRAS_DIR/avidemux_${AVIDEMUX_VERSION}.appImage"
 if [ ! -s "$AVIDEMUX_APPIMAGE" ]; then
     echo "   Descargando Avidemux ${AVIDEMUX_VERSION} AppImage..."
     wget --tries=3 --timeout=120 --content-disposition \
