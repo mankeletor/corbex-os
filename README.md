@@ -1,142 +1,109 @@
 # 🐧 Corbex-OS (Córdoba Excalibur Operating System)
 
-> *"El año pasado customicé Linux Mint MATE para las notebooks escolares de las ESFP de Córdoba — equivalente a comprar un auto base y llevarlo a un taller de tuning según las especificaciones. Este año con CorbexOS, equivale a pedir el auto customizado directamente desde la fábrica. Así es, ¡pasamos del taller a la fábrica!"*
+> *"El año pasado customicé Linux Mint MATE para las notebooks escolares de las ESFP de Córdoba — equivalente a comprar un auto base y llevarlo al taller de tuning. Este año con CorbexOS, pedimos el auto customizado directamente desde la fábrica. ¡Pasamos del taller a la fábrica, papá!"*
 
-CorbexOS es una imagen ISO de **Devuan GNU/Linux (Excalibur)** construida desde cero para las netbooks de las escuelas secundarias de Córdoba. No es una instalación manual ni un script de post-configuración: es una ISO que ya sale del horno con todo adentro — sistema, escritorio, software educativo, firmwares, configuración de red y usuarios. El docente o técnico graba en un USB, instala, y listo.
+CorbexOS no es un scriptcito más de post-configuración armado a las apuradas. Es una imagen ISO de **Devuan GNU/Linux (Excalibur)** construida *desde cero* y pensada con arquitectura pura para las netbooks de las escuelas secundarias de Córdoba. 
 
----
-
-## ¿Por qué Devuan y no Ubuntu/Mint?
-
-Las netbooks escolares tienen hardware acotado (4GB RAM, procesadores Intel de generaciones anteriores). Devuan corre sobre **OpenRC** en lugar de systemd, lo que se traduce en un arranque más rápido, menos procesos en memoria y más recursos disponibles para el alumno. El escritorio **MATE** completa la ecuación: liviano, estable y familiar para cualquiera que haya usado Windows.
+Acá no hay inmediatez ni atajos baratos: la ISO sale del horno con el sistema, el escritorio MATE, software educativo pesado, firmwares blindados (`hw-detect`), y la red preconfigurada. El técnico enchufa el USB, bootea, y la máquina se instala sola (100% desatendida) mientras se toma unos buenos mates. 
 
 ---
 
-## 🚀 Qué trae CorbexOS
+## 🏛️ ¿Por qué Devuan y no Ubuntu/Mint? (Conceptos > Código)
 
-| Área | Detalle |
+Las netbooks escolares son hardware acotado (típicamente 4GB de RAM y procesadores Celeron/Atom que piden auxilio). Instalarles un Ubuntu de fábrica con GNOME es la muerte.
+
+Devuan corre sobre la gloria de **OpenRC** en lugar del monolítico systemd, lo que se traduce en un arranque rapidísimo, menos procesos en memoria y recursos reales para que el pibe pueda estudiar. El escritorio **MATE** completa la ecuación: liviano a más no poder, y con una curva de aprendizaje mínima para cualquiera que venga de Windows.
+
+---
+
+## 🚀 Qué trae CorbexOS bajo el capó
+
+| Área | Arquitectura Detallada |
 |---|---|
-| **Base** | Devuan Excalibur (Stable) — sin systemd |
-| **Init** | OpenRC con arranque paralelo optimizado |
-| **Escritorio** | MATE Desktop |
-| **Ofimática** | LibreOffice en español (es-AR) |
-| **Programación** | Python 3, PSeInt, Git, Node.js |
-| **Diseño** | GIMP, Inkscape, Avidemux, Audacity |
-| **Browser** | Google Chrome (con soporte de sync de cuenta Google) |
-| **IDE educativo** | Antigravity (offline, instalación automática) |
-| **Red** | NetworkManager, WiFi, firmwares Intel/Realtek incluidos |
-| **Instalación** | 100% desatendida vía `preseed.cfg` — sin intervención humana |
-| **Idioma** | Español Argentina en todo el sistema y aplicaciones |
+| **Motor (Base)** | Devuan Excalibur (Stable) — sin rastro de systemd. |
+| **Arranque** | OpenRC con paralelismo optimizado. |
+| **Interfaz** | MATE Desktop (Liviano y de la vieja escuela). |
+| **Ofimática** | LibreOffice en español (es-AR). |
+| **Programación** | Python 3, PSeInt, Git, Node.js (Herramientas para pensar). |
+| **Diseño** | GIMP, Inkscape, Avidemux, Audacity. |
+| **Navegador** | Google Chrome (con sync listo para cuentas escolares). |
+| **IDE Educativo** | Antigravity (Instalación automática y offline). |
+| **Drivers** | NetworkManager y blindaje de firmwares Intel/Realtek para bare-metal. |
+| **Instalación** | Archivo `preseed.cfg` inyectado para un deploy desatendido, anti-errores y sin humanos en el medio. |
+| **Idioma** | Español (Rioplatense / Argentina) de punta a punta. |
 
 ---
 
-## 📂 Estructura del Repositorio
+## 📂 Estructura Modular del Repositorio
+
+Acá programamos dividiendo los problemas grandes en piezas chicas. Fijate el esquema:
 
 ```
 corbex-os/
-├── main.sh                  # Orquestador principal — ejecuta los módulos en orden
-├── config.env               # Variables de configuración (rutas de ISOs, versión, etc.)
-├── preseed.cfg              # Instalación desatendida: idioma, usuario, repos, paquetes
-├── rc.conf                  # Configuración de OpenRC
-├── pkgs_manual_clean.txt    # Lista semilla de paquetes base
-├── modules/
-│   ├── 01_check_deps.sh     # Verifica dependencias del sistema de build
-│   ├── 02_extract_iso.sh    # Extrae la ISO Netinstall base
-│   ├── 03_build_initrd.sh   # Modifica el initrd e inyecta preseed + postinst
-│   ├── 04_repo_local.sh     # Arma el repo local offline + descarga extras
-│   └── 05_build_iso.sh      # Reensambla la ISO final con xorriso
+├── main.sh                  # Orquestador maestro — la batuta que dirige todo.
+├── config.env               # Variables duras (rutas, de dónde bajar cosas).
+├── preseed.cfg              # El cerebro desatendido: LVM, usuarios, GRUB.
+├── rc.conf                  # Tweaks de OpenRC.
+├── modules/                 # (Las tripas del build)
+│   ├── 01_check_deps.sh     # Chequeo de dependencias vitales.
+│   ├── 02_extract_iso.sh    # Operación a la ISO Netinstall base.
+│   ├── 03_build_initrd.sh   # Cirugía mayor al initrd (inyección de preseed).
+│   ├── 04_repo_local.sh     # Armado de repositorio offline de chapa y pintura.
+│   └── 05_build_iso.sh      # El reensamblado magistral con xorriso.
 ├── scripts_aux/
-│   └── postinst_final.sh    # Post-instalación dentro del chroot del target
-├── templates/
-│   ├── isolinux.cfg         # Menú de arranque (ISOLINUX)
-│   ├── rc.conf              # Plantilla de OpenRC
-│   └── corbex.dconf         # Configuración global de MATE vía dconf
-└── obsolete/                # Archivos en desuso (no utilizar)
+│   └── postinst_final.sh    # Remate de configuración en el chroot del target.
+├── templates/               # Plantillas estructurales (MATE, GRUB, ISOLINUX).
+└── openspec/                # Infraestructura de Spec-Driven Development (SDD/ATL).
 ```
 
 ---
 
-## 🛠️ Cómo Construir la ISO
+## 🛠️ Cómo Compilar a esta Bestia
+
+Si querés sentir la verdadera adrenalina y aprender cómo funciona esto, bajate el repo y compilá en tu propia consola. 
 
 ### Requisitos Previos
 
-**ISOs base necesarias:**
-
-```
-# ISO Netinstall de Devuan Excalibur
-https://mirror.leaseweb.com/devuan/devuan_excalibur/installer-iso/devuan_excalibur_6.1.0_amd64_netinstall.iso
-
-# ISO Pool1 (repositorio offline de paquetes)
-https://mirror.leaseweb.com/devuan/devuan_excalibur/installer-iso/devuan_excalibur_6.1.0_amd64_pool1.iso
-```
-
-**Dependencias del sistema de build:**
-
+Necesitás las ISOs de Devuan Excalibur (Netinstall y Pool1) y las herramientas básicas en tu Linux:
 ```bash
 sudo apt install xorriso cpio rsync wget curl dpkg-dev flatpak
 ```
 
-### Instrucciones
+### Instrucciones de Build
 
 ```bash
-# 1. Clonar el repositorio
+# 1. Clonás el repositorio a tu máquina
 git clone https://github.com/mankeletor/corbex-os.git
 cd corbex-os
 
-# 2. Configurar rutas de las ISOs descargadas
+# 2. Reconfigurás si es necesario
 nano config.env
 
-# 3. Ejecutar el build completo como root
+# 3. Le das masa al script como buen artesano del software
 sudo bash main.sh
 ```
 
-El proceso demora entre 15 y 40 minutos dependiendo de la velocidad del mirror y la conexión. Al finalizar, la ISO queda en el directorio configurado en `config.env` junto con su `.md5`.
-
-**Tip:** Si querés limpiar la caché de paquetes y forzar una descarga limpia:
-```bash
-sudo bash main.sh --clean
-```
+El proceso de forjado toma entre 15 y 40 minutos dependiendo de tu ancho de banda y la velocidad del espejo (mirror). Al final de la línea de ensamble, te escupe una ISO lista para quemar en un pendrive, con su `.md5` reglamentario.
 
 ---
 
-## 📥 Descarga de la ISO Lista para Usar
+## 📥 Descarga de la ISO Terminada
 
-Si no querés compilar la ISO por tu cuenta, podés descargar la versión estable lista para grabar:
+Si venís corto de tiempo o querés hacer deploy ya en el aula:
 
-> ⚠️ **Enlace de descarga próximamente disponible.**
+> ⚠️ **Enlace de descarga próximamente disponible (Estamos horneando las Release Candidates).**
 
-### ✅ Verificar Integridad
-
-```bash
-md5sum -c corbex-os.iso.md5
-```
-
-### 💾 Grabar en USB
-
+Para quemarla a lo macho en un pendrive (¡Atenti con el comando, que arrasa sin preguntar!):
 ```bash
 sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress && sync
 ```
-
-> ⚠️ Reemplazá `/dev/sdX` con el dispositivo correcto. Verificá con `lsblk` antes de ejecutar — este comando sobreescribe el dispositivo sin confirmación.
-
----
-
-## 🏗️ Cómo Funciona el Build (Resumen Técnico)
-
-1. **Módulo 01** valida que el sistema de build tenga todas las herramientas.
-2. **Módulo 02** extrae la ISO Netinstall original.
-3. **Módulo 04** resuelve dependencias de paquetes via APT en sandbox aislado, arma el repositorio local offline dentro de la ISO y descarga extras (PSeInt, Antigravity, Avidemux, Google Chrome).
-4. **Módulo 03** modifica el initrd: inyecta el `preseed.cfg`, el `postinst_final.sh` y las listas de paquetes.
-5. **Módulo 05** reensambla la ISO final con `xorriso`, con soporte BIOS + UEFI.
-6. Al instalar, el `preseed.cfg` automatiza todo el instalador Debian/Devuan y al final ejecuta el `postinst_final.sh` dentro del chroot del sistema recién instalado.
+*(Cambiá `/dev/sdX` por tu USB. Un error acá y te borrás el disco de 1TB, ¡no digas que no te avisé!)* 
 
 ---
 
-## 👤 Autor
+## 👤 Creador de la Criatura
 
-**Pablo Saquilán** — Maintainer & Dev
+**Pablo Saquilán (DJ Mankeletor)** — Maintainer, Dev, Arquitecto y Profe.
 📧 [psaquilan82@gmail.com](mailto:psaquilan82@gmail.com)
 
----
-
-*Hecho desde la educación cordobesa para el mundo.*
+*Hecho desde las trincheras de la educación pública cordobesa para el mundo.*

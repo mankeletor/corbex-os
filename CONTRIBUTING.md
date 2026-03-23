@@ -1,110 +1,101 @@
-# Guía de Contribución — CorbexOS 📀🇦🇷
+# Guía de Contribución Digna — CorbexOS 📀🇦🇷
 
-Si llegaste hasta acá es porque el proyecto te interesa, y eso ya vale. CorbexOS es un esfuerzo para que las netbooks escolares de Córdoba arranquen con un sistema digno, completo y listo para usar — sin que un técnico tenga que configurar cada equipo a mano. Cualquier mejora suma.
+Si aterrizaste acá es porque te interesó el código y querés ensuciarte las manos. Primero que nada: ¡bienvenido y mil gracias! CorbexOS es un esfuerzo gigantesco a pulmón para que los pibes de las escuelas de Córdoba arranquen con un sistema digno de uso diario. No queremos que un profe o un técnico se pase horas configurando netbooks a pedal. 
+
+Pero ojo: **acá la filosofía manda**. Acá los conceptos están por encima del código facilista. No aceptamos pull requests tirados a las apuradas por alguien que no entiende cómo funciona la ISO por abajo.
 
 ---
 
-## 🚀 Cómo Empezar
+## 🏛️ Filosofía del Proyecto: Conceptos > Código
 
-### Requisitos del Entorno de Build
+1. **AI IS A TOOL: We direct, AI executes. The human always leads.** Si usás IA para programar, tenés que entender el código línea por línea. No copypastees bloques sin saber cómo pegan en el `preseed` o en el `chroot`. 
+2. **KISS y Modularidad**. El orquestador es `main.sh`. Todo lo demás son piezas de relojería (`01_check_deps.sh`, `03_build_initrd.sh`, etc). Si vas a arreglar algo de LVM, no me toques el script de descargas. Cada script hace UNA sola cosa bien hecha.
+3. **SDD (Spec-Driven Development)**: Cuidado con la inmediatez de los "fixes rápidos". Usamos la arquitectura temporal de `openspec/`. Todo feature nuevo tiene que arrancar proponiendo una fase de diseño.
 
-Necesitás un sistema Linux (preferentemente Debian/Devuan) con:
+---
+
+## 🚀 Cómo Empezar a Laburar
+
+### Herramientas del Entorno
+
+Básicamente, necesitás una distro piola basada en Debian con todo el herramental encima:
 
 ```bash
 sudo apt install xorriso cpio rsync wget curl dpkg-dev flatpak shellcheck qemu-system-x86
 ```
 
-Al menos **10GB de espacio libre** en disco para las ISOs base, el directorio de trabajo y la ISO generada.
+Vas a necesitar mínimo **10GB de espacio de disco duro** libres para que la ISO compile sin llorar por I/O disk full.
 
-### Configuración Inicial
+### Tu Primer Build (Clase Práctica)
 
 ```bash
 git clone https://github.com/mankeletor/corbex-os.git
 cd corbex-os
 cp config.env.example config.env
-nano config.env   # Apuntar las rutas a las ISOs de Devuan Excalibur
+# Abrí y configurá las rutas apuntando a tus ISOs Netinstall base.
+nano config.env   
 ```
 
 ---
 
-## 🛠️ Filosofía del Proyecto: KISS + Modular
+## 🛠️ Reglas Básicas de la Casa
 
-El proyecto está organizado en módulos independientes orquestados por `main.sh`. Cada módulo hace una sola cosa. Antes de tocar código, entendé el flujo:
-
-```
-main.sh → 01_check_deps → 02_extract_iso → 04_repo_local → 03_build_initrd → 05_build_iso
-```
-
-**Reglas básicas:**
-
-- **No edites `main.sh`** a menos que necesites cambiar el flujo de ejecución entre módulos.
-- **Nuevas funcionalidades** → creá un script `06_nombre.sh` en `/modules/` y registralo en `main.sh`.
-- **Configuración del escritorio MATE** → va en `templates/corbex.dconf` o en `scripts_aux/postinst_final.sh`.
-- **Paquetes nuevos** → agregá a `pkgs_manual_clean.txt`. El módulo 04 resuelve dependencias automáticamente.
-- **Extras offline** (apps que no están en repos Devuan) → el patrón es: descarga en `04_repo_local.sh` → instalación en `postinst_final.sh`. Ver cómo están implementados PSeInt, Antigravity y Chrome como referencia.
+1. **No se toca `main.sh`** a menos que tengas un motivo arquitectónico gigante para alterar el flujo.
+2. **Funcionalidades Nuevas** → Script nuevo en `/modules/` (ej: `06_nuevo_feature.sh`) y enganchado prolijamente en el main.
+3. **Escritorio MATE y Entorno** → Todo el "tuneo" de dconf va a `templates/corbex.dconf` o inyectado vía `scripts_aux/postinst_final.sh`.
+4. **Instalación Offline de Software Extra** (Como PSeInt o Chrome, que no son paquetes oficiales puritanos) → Fijate el hermoso patrón que usamos: descargar el binario en `04_repo_local.sh`, y luego mandarle el comando de instalación silenciosa en `postinst_final.sh`. Seguí esa misma línea conceptual para todo software nuevo.
 
 ---
 
-## 🧪 Ciclo de Pruebas
+## 🧪 Pruebas Obligatorias (Tu red de seguridad)
 
-Antes de enviar un cambio, verificá:
+Acá "en la cancha se ven los pingos". No me subas nada que no hayas probado con paciencia primero.
 
-**1. Sintaxis**
+**Paso 1: Check de Sintaxis (Linting)**
 ```bash
 shellcheck modules/*.sh scripts_aux/postinst_final.sh
 ```
+*(Si shellcheck llora, vos corregís. Esa herramienta te salva de horas de debug).*
 
-**2. Build completo**
+**Paso 2: Generar la bestia**
 ```bash
 sudo bash main.sh
 ```
 
-**3. Booteo en QEMU**
+**Paso 3: Laboratorio QEMU**
 ```bash
 qemu-system-x86_64 -cdrom /ruta/a/corbex-os.iso -m 2048 -boot d
 ```
-
-**4. Instalación completa** — dejá que el instalador corra hasta el final y verificá que el sistema arranque correctamente con autologin del usuario `alumno`.
+Arrancá la ISO en máquina virtual y simulá la instalación desatendida entera. Asegurate de que el usuario `alumno` loguee perfecto.
 
 ---
 
-## 📬 Cómo Enviar tus Mejoras
+## 📬 Protocolo para Contribuir
 
-1. Fork del repositorio.
-2. Creá una rama descriptiva:
+1. Hacé un Fork de este repositorio con ganas.
+2. Ramificá descriptivamente. Nada de `mi-rama-test`.
    ```bash
    git checkout -b fix/audio-intel-hda
-   git checkout -b feat/agregar-scratch-flatpak
+   git checkout -b feat/agregar-software-nuevo
    ```
-3. Commits descriptivos usando prefijos semánticos:
-   ```
-   fix: corregir inyección de locales en postinst_final.sh
-   feat: agregar instalación offline de Scratch vía Flatpak
-   docs: actualizar README con instrucciones de build
-   refactor: simplificar discovery de mirror en 3.5_build_source.sh
-   ```
-4. Abrí un Pull Request con descripción del cambio y, si aplica, resultado del test en QEMU.
+3. Commits con peso semántico y fundamento técnico:
+   * **MAL:** `Arreglo en red`.
+   * **BIEN:** `fix: corregir inyección de locales en postinst_final.sh que causaba pantalla negra`.
+   * **BIEN:** `refactor: simplificar discovery de mirror en modules para optimizar build`.
+4. Clavá el Pull Request detallando EXACTAMENTE en qué entorno lo probaste (QEMU, Bare-Metal, USB de 16GB, etc.).
 
 ---
 
-## 🎯 Áreas Prioritarias
+## 🎯 Se Buscan Arquitectos Para...
 
-Si no sabés por dónde arrancar, estas son las áreas donde más se necesita trabajo:
+Si querés darle amor al repo, estas son las batallas que todavía estamos peleando:
 
-**🔊 Audio**
-Algunos modelos de netbooks Juana Manso / Conectar Igualdad tienen hardware de audio Intel HDA con volumen muy bajo por defecto. Mejorar la detección automática del hardware y aplicar los ajustes de ALSA correspondientes en el postinst.
-
-**🔋 Energía**
-Optimización de consumo de batería bajo OpenRC: `tlp`, `cpufrequtils`, gestión de suspensión. Las netbooks escolares no siempre tienen acceso a corriente durante la clase.
-
-**🎨 Branding**
-Arte visual para el cargador de arranque ISOLINUX (`/templates/isolinux.cfg`). El splash screen actual es texto ASCII — una imagen PNG 640x480 marcaría bastante la diferencia en la experiencia de instalación.
-
-**🧪 Testing automatizado**
-Script que levante la ISO en QEMU y verifique automáticamente que el sistema arrancó, que el usuario `alumno` tiene sesión activa y que los paquetes críticos están instalados.
+- **Audio de las Netbooks Juana Manso**: Falla crónicamente con bajos niveles de audio debido a los Intel HDA. Se necesita código en `postinst` para tunear los perfiles ALSA predeterminados.
+- **Gestión de Energía**: Baterías que mueren en 2 horas en el aula. Necesitamos perfilar TLP o acpi-cpufreq.
+- **Branding de Arranque**: El splash de GRUB/ISOLINUX en texto es retro, sí, pero capaz un PNG de 640x480 de CorbexOS le da más chapa al instalador.
+- **Scripts de Auto-Test Automáticos**: Algún loco de la automatización que monte un github-action con QEMU headless para que pruebe el boot ciego cada vez que hacés un commit.
 
 ---
 
 ## ⚖️ Licencia
-
-Al contribuir, aceptás que tu código será liberado bajo **GNU GPL v3**.
+Al mandar tu PR y colaborar con CorbexOS, aceptás con honores que tu código pasa a ser libre bajo **GNU GPL v3**. La educación es abierta, tu código también.
