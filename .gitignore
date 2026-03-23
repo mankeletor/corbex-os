@@ -86,3 +86,13 @@ desktop.ini
 /mnt/
 extras/
 antigravity_*.deb
+
+# --------------------
+# SPEC-DRIVEN DEVELOPMENT (Agent Teams Lite)
+# --------------------
+.atl/
+openspec/
+.agent/
+.agents/
+
+
