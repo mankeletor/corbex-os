@@ -304,7 +304,7 @@ fi
 # ─────────────────────────────────────────────
 log "Instalando Avidemux (AppImage extraído)..."
 AVIDEMUX_APPIMAGE="/root/extras/avidemux_2.8.1.appImage"
-DESKTOP_DIR = ""
+DESKTOP_DIR=""
 if [ -s "$AVIDEMUX_APPIMAGE" ]; then
     if [ -d /home/alumno/Desktop ]; then
         DESKTOP_DIR="/home/alumno/Desktop"
@@ -312,11 +312,9 @@ if [ -s "$AVIDEMUX_APPIMAGE" ]; then
     if [ -d /home/alumno/Escritorio ]; then
         DESKTOP_DIR="/home/alumno/Escritorio"
     fi
-    cp "$AVIDEMUX_APPIMAGE" /home/alumno/$DESKTOP_DIR
-    chown alumno:alumno /home/alumno/$DESKTOP_DIR/avidemux_2.8.1.appImage
-    chmod +x /home/alumno/$DESKTOP_DIR/avidemux_2.8.1.appImage
-    chown alumno:alumno /home/alumno/$DESKTOP_DIR/avidemux_2.8.1.appImage
-    chmod +x /home/alumno/$DESKTOP_DIR/avidemux_2.8.1.appImage
+    cp "$AVIDEMUX_APPIMAGE" "$DESKTOP_DIR/"
+    chown alumno:alumno "$DESKTOP_DIR/avidemux_2.8.1.appImage"
+    chmod +x "$DESKTOP_DIR/avidemux_2.8.1.appImage"
 
     log "Avidemux instalado ✅"
 else
