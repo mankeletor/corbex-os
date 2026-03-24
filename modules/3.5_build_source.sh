@@ -1,6 +1,6 @@
 #!/bin/bash
 # CorbexOS - Generador Dinámico de Repositorios
-# Uso: ./3.5_build_source.sh "dev1mir.registrationsplus.net"
+# Uso: ${0##*/} "dev1mir.registrationsplus.net"
 #
 # Requiere: bash (usa export -f, arrays asociativos, process substitution)
 # Sin set -e: errores manejados explícitamente para no interferir con el discovery.
