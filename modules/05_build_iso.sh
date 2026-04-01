@@ -19,7 +19,14 @@ echo "   Actualizando isolinux.cfg para incluir preseed..."
 
 cat $BASE_DIR/templates/isolinux.cfg > "$ISO_HOME/boot/isolinux/isolinux.cfg"
 
-
+# 1.5 Copiar esa misma configuración al efi.img de UEFI
+if command -v mcopy > /dev/null 2>&1; then
+    echo "   Actualizando syslinux.cfg/menu.cfg UEFI dentro de efi.img..."
+    efi_img="$ISO_HOME/boot/grub/efi.img"
+    mdel -i "$efi_img" ::/boot/isolinux/syslinux.cfg ::/boot/isolinux/menu.cfg >/dev/null 2>&1 || true
+    mcopy -i "$efi_img" "$BASE_DIR/templates/isolinux.cfg" ::/boot/isolinux/syslinux.cfg
+    mcopy -i "$efi_img" "$BASE_DIR/templates/isolinux.cfg" ::/boot/isolinux/menu.cfg
+fi
 # 2. Construcción con Xorriso Híbrido Robusto (v0.99rc24)
 echo "   Ejecutando Xorriso con parámetros de booteo de la ISO original..."
 xorriso -as mkisofs -r -J -joliet-long \

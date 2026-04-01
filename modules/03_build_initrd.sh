@@ -42,20 +42,18 @@ wireless-tools iw rfkill curl; do
     fi
 done
 
-# 2. Descomprimir Initrd
+# 2. Preparar el Payload a Inyectar (Método Overlay)
+# En lugar de extraer el initrd (que rompe permisos si no sos root), 
+# armamos un mini initrd solo con nuestra inyección y lo concatenamos al final.
+
 local_initrd="$ISO_HOME/boot/isolinux/initrd.gz"
 [ ! -f "${local_initrd}.original" ] && cp "$local_initrd" "${local_initrd}.original"
 
-mkdir -p "$WORKDIR/temp_initrd"
-cd "$WORKDIR/temp_initrd"
-if ! zcat "$local_initrd" | cpio -idmv > /dev/null 2>&1; then
-    echo "❌ Error: No se pudo extraer el initrd. ¿Está corrupto el archivo?"
-    exit 1
-fi
-echo "   ✅ Initrd extraído correctamente"
+mkdir -p "$WORKDIR/payload_initrd"
+cd "$WORKDIR/payload_initrd"
 
-# 3. Inyectar archivos críticos
-echo "   Inyectando preseed, postinst, rc.conf y listas de paquetes..."
+# 3. Preparar archivos críticos
+echo "   Preparando preseed, postinst, rc.conf y listas de paquetes para el Overlay..."
 cp "$BASE_DIR/preseed.cfg" ./preseed.cfg
 cp "$BASE_DIR/scripts_aux/postinst_final.sh" ./postinst.sh
 cp "$BASE_DIR/templates/rc.conf" ./rc.conf
@@ -64,8 +62,7 @@ cp "$BASE_DIR/pkgs_install.txt" ./pkgs_install.txt
 cp "$BASE_DIR/modules/3.5_build_source.sh" corbex-build-sources.sh
 chmod +x corbex-build-sources.sh
 
-# --- NUEVO: Script de intervención radical (finish-install) ---
-# Optimizado para RAM: solo lanza apt tras asegurar que el target tiene el repo local
+# Script de intervención radical (finish-install)
 echo "   Configurando ejecución radical en finish-install..."
 mkdir -p usr/lib/finish-install.d
 cat > usr/lib/finish-install.d/99corbex-custom << 'EOF'
@@ -77,21 +74,48 @@ chmod +x /target/root/postinst.sh
 EOF
 chmod +x usr/lib/finish-install.d/99corbex-custom
 
-# 4. Actualizar preseed con la lista "Cerebro" (PKGS_MANUAL)
+# Actualizar preseed con la lista "Cerebro"
 PKGS_STRING=$(echo "${PAQUETES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
 echo "   Inyectando paquetes: $PKGS_STRING"
 sed -i "s/__PAQUETES__/$PKGS_STRING/g" ./preseed.cfg
 
-# 5. Reempaquetar
-echo "   Reempaquetando Initrd (Multi-threading: $THREADS)..."
-if command -v pigz > /dev/null 2>&1; then
-    find . | cpio -H newc -o | pigz -p "$THREADS" -9 > "$WORKDIR/initrd_nuevo.gz"
+# 4. Empaquetar el Payload
+echo "   Empaquetando capa de Inyección..."
+find . | cpio -H newc -o 2>/dev/null | gzip -9 > "$WORKDIR/inyeccion.cpio.gz"
+
+# 5. Concatenar (BIOS)
+echo "   Generando de forma segura el Initrd BIOS..."
+cat "${local_initrd}.original" "$WORKDIR/inyeccion.cpio.gz" > "$local_initrd"
+
+cd "$WORKDIR"
+rm -rf "$WORKDIR/payload_initrd"
+
+echo "   ✅ Initrd principal (BIOS) inyectado exitosamente"
+
+# ==============================================================
+# 🔥 MAGIA UEFI: Concatenar el mismo payload en el initrd.gz del EFI
+# ==============================================================
+echo "   [UEFI] Inyectando configuraciones en el initrd.gz integrado dentro de efi.img..."
+
+efi_img="$ISO_HOME/boot/grub/efi.img"
+
+if command -v mcopy > /dev/null 2>&1; then
+    # Sacamos el initrd original del FAT
+    mcopy -i "$efi_img" ::/boot/isolinux/initrd.gz "$WORKDIR/initrd_efi.gz"
+
+    # Concatenamos el initrd original del EFI con nuestra Inyección
+    cat "$WORKDIR/initrd_efi.gz" "$WORKDIR/inyeccion.cpio.gz" > "$WORKDIR/initrd_efi_nuevo.gz"
+
+    # Borramos el viejo del FAT y metemos el inyectado
+    mdel -i "$efi_img" ::/boot/isolinux/initrd.gz
+    mcopy -i "$efi_img" "$WORKDIR/initrd_efi_nuevo.gz" ::/boot/isolinux/initrd.gz
+
+    rm -f "$WORKDIR/initrd_efi.gz" "$WORKDIR/initrd_efi_nuevo.gz"
+    echo "   ✅ Initrd EFI (UEFI) inyectado exitosamente con método Overlay"
 else
-    find . | cpio -H newc -o | gzip -9 > "$WORKDIR/initrd_nuevo.gz"
+    echo "⚠️ ADVERTENCIA: 'mtools' no está instalado. No se pudo parchear el booteo UEFI."
+    echo "Por favor instale mtools con: sudo apt install mtools"
 fi
 
-mv "$WORKDIR/initrd_nuevo.gz" "$local_initrd"
-cd "$WORKDIR"
-rm -rf "$WORKDIR/temp_initrd"
-
-echo "✅ Initrd actualizado e inyectado"
+rm -f "$WORKDIR/inyeccion.cpio.gz"
+echo "✅ Todos los Initrds fueron actualizados"

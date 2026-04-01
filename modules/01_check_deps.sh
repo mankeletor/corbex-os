@@ -12,11 +12,13 @@ if [ -z "$ISO_ORIGINAL" ]; then
 fi
 
 # 1. Verificar comandos necesarios
-for cmd in cpio gzip xorriso curl rsync wget awk sed dpkg-scanpackages apt-ftparchive; do
+for cmd in cpio gzip xorriso curl rsync wget awk sed dpkg-scanpackages apt-ftparchive mcopy mdel; do
     if ! command -v $cmd &> /dev/null; then
         echo "❌ Error: $cmd no está instalado."
         if [ "$cmd" = "dpkg-scanpackages" ]; then
             echo "   Instalalo con: apt install dpkg-dev"
+        elif [ "$cmd" = "mcopy" ] || [ "$cmd" = "mdel" ]; then
+            echo "   Instalalo con: apt install mtools"
         else
             echo "   Instalalo con: apt install $cmd"
         fi
