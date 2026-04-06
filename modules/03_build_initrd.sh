@@ -79,6 +79,11 @@ PKGS_STRING=$(echo "${PAQUETES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
 echo "   Inyectando paquetes: $PKGS_STRING"
 sed -i "s/__PAQUETES__/$PKGS_STRING/g" ./preseed.cfg
 
+# 🔥 DUAL-INJECT: Copiar el preseed procesado también al root de la ISO
+# Esto asegura que el instalador lo encuentre aun si la concatenación del initrd falla en UEFI.
+cp ./preseed.cfg "$ISO_HOME/preseed.cfg"
+echo "   ✅ Preseed fallback copiado al root de la ISO"
+
 # 4. Empaquetar el Payload
 echo "   Empaquetando capa de Inyección..."
 find . | cpio -H newc -o 2>/dev/null | gzip -9 > "$WORKDIR/inyeccion.cpio.gz"
