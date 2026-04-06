@@ -25,6 +25,7 @@ dhcpcd-base
 dmidecode
 dpkg
 e2fsprogs
+efibootmgr
 eject
 eudev
 fdisk
@@ -42,7 +43,8 @@ git
 gnome-software-plugin-flatpak
 gpgv
 grub-common
-grub-pc
+grub-efi-amd64-bin
+grub-pc-bin
 gstreamer1.0-libav
 gstreamer1.0-plugins-bad
 gstreamer1.0-plugins-good

@@ -54,7 +54,7 @@ cd "$WORKDIR/payload_initrd"
 
 # 3. Preparar archivos críticos
 echo "   Preparando preseed, postinst, rc.conf y listas de paquetes para el Overlay..."
-cp "$BASE_DIR/preseed.cfg" ./preseed.cfg
+cp "$BASE_DIR/templates/preseed.cfg" ./preseed.cfg
 cp "$BASE_DIR/scripts_aux/postinst_final.sh" ./postinst.sh
 cp "$BASE_DIR/templates/rc.conf" ./rc.conf
 cp "$BASE_DIR/templates/corbex.dconf" ./corbex.dconf

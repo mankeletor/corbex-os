@@ -6,9 +6,11 @@ echo "📋 [Módulo 01] Verificando dependencias y rutas..."
 
 # Cargar configuración si no está cargada
 # Carga de configuración corregida
-if [ -z "$ISO_ORIGINAL" ]; then
+if [ -z "${ISO_ORIGINAL:-}" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    source "$SCRIPT_DIR/../config.env"
+    if [ -f "$SCRIPT_DIR/../config.env" ]; then
+        source "$SCRIPT_DIR/../config.env"
+    fi
 fi
 
 # 1. Verificar comandos necesarios

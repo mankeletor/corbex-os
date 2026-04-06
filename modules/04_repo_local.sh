@@ -149,22 +149,37 @@ PAQUETES_CRITICOS=(
     va-driver-all
     usb-modeswitch
     task-laptop
+    grub-common
+    grub-pc-bin
+    grub-efi-amd64-bin
+    efibootmgr
 )
 PAQUETES_SEMILLA+=("${PAQUETES_CRITICOS[@]}")
 
-# Exportar la lista combinada (Manual + Críticos) para que module 03 la inyecte a la ISO.
-printf "%s\n" "${PAQUETES_SEMILLA[@]}" | sort -u > "$BASE_DIR/pkgs_install.txt"
+# 🔥 GRUB-DUAL: Asegurar que ambos GRUBs meta-paquetes estén para la descarga
+# pero NO los incluimos en PAQUETES_SEMILLA para no romper la simulación de APT
+# ya que grub-pc y grub-efi-amd64 suelen entrar en conflicto.
+PAQUETES_ADICIONALES_REPOS=(grub-pc grub-efi-amd64)
+
+# Exportar la lista combinada (Manual + Críticos) filtrando los metapaquetes de GRUB
+# Esto evita que 'd-i pkgsel' intente instalarlos prematuramente o con la arquitectura errónea.
+printf "%s\n" "${PAQUETES_SEMILLA[@]}" | grep -vE "^(grub-pc|grub-efi-amd64)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
 
 # 0.1 Resolución de Dependencias Recursivas (Cerebro v0.99rc27)
 echo "   Resolviendo dependencias recursivas mediante simulación APT..."
+# Incluimos los metapaquetes de GRUB para la resolución uno por uno si es necesario, 
+# o simplemente los añadimos a la lista final de descarga.
+PAQUETES_SIMULACION=("${PAQUETES_SEMILLA[@]}" "${PAQUETES_ADICIONALES_REPOS[@]}")
 # Extraer solo los nombres de paquetes que APT planea instalar
-PAQUETES_LISTA_COMPLETA=$(apt-get -c "$APT_SANDBOX/apt.conf" --simulate install "${PAQUETES_SEMILLA[@]}" 2>/dev/null | grep "^Inst " | awk '{print $2}' | sort -u || true)
+# Nota: usamos --ignore-missing para que no mate el script si algún paquete adicional tiene choques teóricos
+PAQUETES_LISTA_COMPLETA=$(apt-get -c "$APT_SANDBOX/apt.conf" --simulate install "${PAQUETES_SIMULACION[@]}" 2>/dev/null | grep "^Inst " | awk '{print $2}' | sort -u || true)
 
 if [ -z "$PAQUETES_LISTA_COMPLETA" ]; then
     echo "⚠️ Advertencia: APT no pudo resolver dependencias. Usando solo lista manual."
-    mapfile -t PAQUETES < <(printf "%s\n" "${PAQUETES_SEMILLA[@]}" | sort -u)
+    mapfile -t PAQUETES < <(printf "%s\n" "${PAQUETES_SEMILLA[@]}" "${PAQUETES_ADICIONALES_REPOS[@]}" | sort -u)
 else
-    mapfile -t PAQUETES <<< "$PAQUETES_LISTA_COMPLETA"
+    # Combinar resolución con adicionales forzados para el Repo
+    mapfile -t PAQUETES < <(printf "%s\n" "$PAQUETES_LISTA_COMPLETA" "${PAQUETES_ADICIONALES_REPOS[@]}" | tr ' ' '\n' | sort -u)
 fi
 
 # 0.2 Generación de pkgs_offline.txt (Refactorizado)
