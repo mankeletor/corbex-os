@@ -80,6 +80,7 @@ fi
 cat > "$APT_SANDBOX/apt.conf" << EOF
 Dir "$APT_SANDBOX";
 Dir::State "$APT_SANDBOX/var/lib/apt";
+Dir::State::status "$APT_SANDBOX/var/lib/apt/status";
 Dir::Cache "$APT_SANDBOX/var/cache/apt";
 Dir::Etc "$APT_SANDBOX/etc/apt";
 Dir::Log "$APT_SANDBOX/var/log/apt";
@@ -91,6 +92,9 @@ APT::Get::AllowUnauthenticated "true";
 Acquire::https::Verify-Peer "false";
 APT::Architecture "amd64";
 EOF
+
+# Asegurar que el archivo status exista y esté vacío para una resolución limpia
+touch "$APT_SANDBOX/var/lib/apt/status"
 
 echo "   Sincronizando índices de Devuan en el sandbox..."
 # Forzar actualización ignorando cualquier restricción de seguridad del host
@@ -161,8 +165,7 @@ PAQUETES_SEMILLA+=("${PAQUETES_CRITICOS[@]}")
 # ya que grub-pc y grub-efi-amd64 suelen entrar en conflicto.
 PAQUETES_ADICIONALES_REPOS=(grub-pc grub-efi-amd64)
 
-# Exportar la lista combinada (Manual + Críticos) filtrando los metapaquetes de GRUB
-# Esto evita que 'd-i pkgsel' intente instalarlos prematuramente o con la arquitectura errónea.
+# Exportar la lista base (se actualizará tras la resolución)
 printf "%s\n" "${PAQUETES_SEMILLA[@]}" | grep -vE "^(grub-pc|grub-efi-amd64)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
 
 # 0.1 Resolución de Dependencias Recursivas (Cerebro v0.99rc27)
@@ -180,6 +183,11 @@ if [ -z "$PAQUETES_LISTA_COMPLETA" ]; then
 else
     # Combinar resolución con adicionales forzados para el Repo
     mapfile -t PAQUETES < <(printf "%s\n" "$PAQUETES_LISTA_COMPLETA" "${PAQUETES_ADICIONALES_REPOS[@]}" | tr ' ' '\n' | sort -u)
+    
+    # 0.1b REFINAMIENTO DE pkgs_install.txt: Usar la lista resuelta para el instalador
+    # Esto asegura que d-i pkgsel sepa exactamente qué instalar offline.
+    echo "   Refinando pkgs_install.txt con resolución de dependencias completa..."
+    printf "%s\n" "$PAQUETES_LISTA_COMPLETA" | grep -vE "^(grub-pc|grub-efi-amd64)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
 fi
 
 # 0.2 Generación de pkgs_offline.txt (Refactorizado)
