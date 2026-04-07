@@ -54,6 +54,8 @@ APT_SANDBOX="$WORKDIR/apt-temp"
 mkdir -p "$APT_SANDBOX/var/lib/apt/lists/partial"
 mkdir -p "$APT_SANDBOX/var/cache/apt/archives/partial"
 mkdir -p "$APT_SANDBOX/etc/apt/preferences.d"
+mkdir -p "$APT_SANDBOX/etc/apt/apt.conf.d"
+mkdir -p "$APT_SANDBOX/etc/apt/sources.list.d"
 mkdir -p "$APT_SANDBOX/var/log/apt"
 
 SOURCES_OUTPUT=""
@@ -79,11 +81,11 @@ fi
 
 cat > "$APT_SANDBOX/apt.conf" << EOF
 Dir "$APT_SANDBOX";
-Dir::State "$APT_SANDBOX/var/lib/apt";
-Dir::State::status "$APT_SANDBOX/var/lib/apt/status";
-Dir::Cache "$APT_SANDBOX/var/cache/apt";
-Dir::Etc "$APT_SANDBOX/etc/apt";
-Dir::Log "$APT_SANDBOX/var/log/apt";
+Dir::State "var/lib/apt";
+Dir::State::status "var/lib/apt/status";
+Dir::Cache "var/cache/apt";
+Dir::Etc "etc/apt";
+Dir::Log "var/log/apt";
 # Configuraciones para Sandbox sin GPG (si fallan las llaves)
 Acquire::AllowInsecureRepositories "true";
 Acquire::AllowDowngradeToInsecureRepositories "true";
@@ -172,9 +174,10 @@ printf "%s\n" "${PAQUETES_SEMILLA[@]}" | grep -vE "^(grub-pc|grub-efi-amd64)$" |
 echo "   Resolviendo dependencias recursivas mediante simulación APT..."
 # Incluimos los metapaquetes de GRUB para la resolución uno por uno si es necesario, 
 # o simplemente los añadimos a la lista final de descarga.
-PAQUETES_SIMULACION=("${PAQUETES_SEMILLA[@]}" "${PAQUETES_ADICIONALES_REPOS[@]}")
+# Excluir los metapaquetes de GRUB de la simulación para evitar el conflicto
+# (ya que uno entra en conflicto con el otro, pero queremos ambo (.deb) en el Repo)
+PAQUETES_SIMULACION=("${PAQUETES_SEMILLA[@]}")
 # Extraer solo los nombres de paquetes que APT planea instalar
-# Nota: usamos --ignore-missing para que no mate el script si algún paquete adicional tiene choques teóricos
 PAQUETES_LISTA_COMPLETA=$(apt-get -c "$APT_SANDBOX/apt.conf" --simulate install "${PAQUETES_SIMULACION[@]}" 2>/dev/null | grep "^Inst " | awk '{print $2}' | sort -u || true)
 
 if [ -z "$PAQUETES_LISTA_COMPLETA" ]; then
