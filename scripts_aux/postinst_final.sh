@@ -413,6 +413,36 @@ else
     flog "⚠️ Usuario alumno no existe"
 fi
 
+# --- 1.5 Esperar red y Generar sources.list dinámico ---
+flog "Esperando conexión a Internet (max 60s)..."
+NET_OK=false
+for i in {1..12}; do
+    if ping -q -c 1 -W 3 8.8.8.8 >/dev/null 2>&1 || curl -s -I --connect-timeout 3 http://dev1mir.registrationsplus.net >/dev/null 2>&1; then
+        NET_OK=true
+        break
+    fi
+    sleep 5
+done
+
+if [ "$NET_OK" = "true" ]; then
+    flog "Red detectada. Generando /etc/apt/sources.list dinámico..."
+    if [ -x "/usr/local/sbin/corbex-build-sources.sh" ]; then
+        if /usr/local/sbin/corbex-build-sources.sh "dev1mir.registrationsplus.net" > /tmp/sources.list.new 2>>"$FLOG"; then
+            mv /tmp/sources.list.new /etc/apt/sources.list
+            flog "sources.list generado exitosamente ✅"
+            apt-get update -qq 2>/dev/null || flog "⚠️ apt-get update falló luego de generar sources.list"
+        else
+            flog "⚠️ Falló la generación. Se reintentará en el próximo arranque."
+            exit 1
+        fi
+    else
+        flog "⚠️ Script corbex-build-sources.sh no encontrado o no ejecutable. Ignorando."
+    fi
+else
+    flog "⚠️ Sin conexión a internet tras 60s. Aplazando firstrun para el próximo reinicio..."
+    exit 1
+fi
+
 # --- 2. Limpieza de paquetes (con timeout) ---
 flog "Limpieza de paquetes..."
 export DEBIAN_FRONTEND=noninteractive
