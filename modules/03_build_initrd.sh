@@ -62,6 +62,13 @@ cp "$BASE_DIR/pkgs_install.txt" ./pkgs_install.txt
 cp "$BASE_DIR/modules/3.5_build_source.sh" corbex-build-sources.sh
 chmod +x corbex-build-sources.sh
 
+# 🔥 DUAL-INJECT: Copiamos todo esto directamente a la raíz de la ISO
+cp ./postinst.sh "$ISO_HOME/postinst.sh"
+cp ./rc.conf "$ISO_HOME/rc.conf"
+cp ./corbex.dconf "$ISO_HOME/corbex.dconf"
+cp ./pkgs_install.txt "$ISO_HOME/pkgs_install.txt"
+cp ./corbex-build-sources.sh "$ISO_HOME/corbex-build-sources.sh"
+
 # Script de intervención radical (finish-install)
 echo "   Configurando ejecución radical en finish-install..."
 mkdir -p usr/lib/finish-install.d
