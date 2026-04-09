@@ -43,11 +43,11 @@ update-locale LANG=es_AR.UTF-8
 if [ -f /root/pkgs_install.txt ]; then
     LISTA_PKGS=$(tr '\n' ' ' < /root/pkgs_install.txt | sed 's/  */ /g')
     log "Instalando paquetes: $LISTA_PKGS"
-    apt-get update || log "⚠️ Falló update local/mirror"
+    apt-get update < /dev/null || log "⚠️ Falló update local/mirror"
     # shellcheck disable=SC2086 # Word splitting intencional: lista de paquetes
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    DEBIAN_FRONTEND=noninteractive apt-get -o APT::CDROM::NoMount=true install -y \
         --no-install-recommends --fix-broken \
-        $LISTA_PKGS 2>&1 | tee /root/postinst_manual_pkgs.log
+        $LISTA_PKGS < /dev/null 2>&1 | tee /root/postinst_manual_pkgs.log
 fi
 
 # ─────────────────────────────────────────────
@@ -341,7 +341,7 @@ log "Instalando Google Chrome offline..."
 CHROME_DEB="/root/extras/google-chrome-stable.deb"
 if [ -s "$CHROME_DEB" ]; then
     DEBIAN_FRONTEND=noninteractive dpkg -i "$CHROME_DEB" 2>/dev/null || \
-        apt-get install -f -y 2>/dev/null || true
+        apt-get -o APT::CDROM::NoMount=true install -f -y < /dev/null 2>/dev/null || true
     if dpkg -l google-chrome-stable 2>/dev/null | grep -q "^ii"; then
         log "Google Chrome instalado ✅"
     else
@@ -361,7 +361,7 @@ if [ -s "$AGDIR/antigravity-repo-key.gpg" ] && \
     mkdir -p /etc/apt/keyrings
     cp "$AGDIR/antigravity-repo-key.gpg" /etc/apt/keyrings/
     DEBIAN_FRONTEND=noninteractive dpkg -i "$AGDIR"/antigravity_*.deb 2>/dev/null || \
-        apt-get install -f -y 2>/dev/null || true
+        apt-get -o APT::CDROM::NoMount=true install -f -y < /dev/null 2>/dev/null || true
     echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] \
 https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ \
 antigravity-debian main" > /etc/apt/sources.list.d/antigravity.list
