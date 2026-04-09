@@ -16,8 +16,18 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') - postinst_final.sh INICIADO" > "$LOG"
 set -x  # Modo debug
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG"; }
-
 log "=== Optimizando sistema para CorbexOS ==="
+
+# ─────────────────────────────────────────────
+# 0. Blindaje Offline (Evitar cuelgues de red)
+# ─────────────────────────────────────────────
+log "Aplicando configuración APT offline (timeout corto)..."
+cat > /etc/apt/apt.conf.d/99offline-install << 'EOF'
+Acquire::Retries "0";
+Acquire::http::Timeout "3";
+Acquire::https::Timeout "3";
+APT::Get::Assume-Yes "true";
+EOF
 
 # ─────────────────────────────────────────────
 # 1. Idioma y locales (✅ seguro en chroot)
@@ -517,6 +527,8 @@ rc-update add NetworkManager default 2>/dev/null || true
 rc-update add corbex-firstrun default 2>/dev/null || true
 
 # ─────────────────────────────────────────────
+rm -f /etc/apt/apt.conf.d/99offline-install
+
 log "postinst_final.sh FINALIZADO OK"
 echo "$(date '+%Y-%m-%d %H:%M:%S') - FINALIZADO OK" >> "$LOG"
 exit 0
