@@ -306,30 +306,6 @@ else
     log "⚠️ /root/extras/pseint.tgz no encontrado"
 fi
 
-# ─────────────────────────────────────────────
-# 12b. Instalar Avidemux desde AppImage
-#      FUSE puede no estar disponible en el sistema base,
-#      por eso se extrae el AppImage y se ejecuta el binario
-#      directamente desde squashfs-root.
-# ─────────────────────────────────────────────
-log "Instalando Avidemux (AppImage extraído)..."
-AVIDEMUX_APPIMAGE="/root/extras/avidemux_2.8.1.appImage"
-DESKTOP_DIR=""
-if [ -s "$AVIDEMUX_APPIMAGE" ]; then
-    if [ -d /home/alumno/Desktop ]; then
-        DESKTOP_DIR="/home/alumno/Desktop"
-    fi
-    if [ -d /home/alumno/Escritorio ]; then
-        DESKTOP_DIR="/home/alumno/Escritorio"
-    fi
-    cp "$AVIDEMUX_APPIMAGE" "$DESKTOP_DIR/"
-    chown alumno:alumno "$DESKTOP_DIR/avidemux_2.8.1.appImage"
-    chmod +x "$DESKTOP_DIR/avidemux_2.8.1.appImage"
-
-    log "Avidemux instalado ✅"
-else
-    log "⚠️ /root/extras/avidemux_2.8.1.appImage no encontrado"
-fi
 
 # ─────────────────────────────────────────────
 # 12c. Instalar Google Chrome offline desde ISO
