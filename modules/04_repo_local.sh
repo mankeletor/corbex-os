@@ -140,6 +140,7 @@ PAQUETES_CRITICOS=(
     curl
     vlc
     vlc-plugin-base
+    libfuse2
     xclip
     git
     nodejs
@@ -377,6 +378,7 @@ if [ -s "$GPG_FILE" ] && ! ls "$EXTRAS_DIR/antigravity/antigravity_"*.deb 1>/dev
         echo "⚠️ No se pudo descargar .deb de Antigravity" >> "$WARN_LOG"
     rm -f "$TMP_DIR/antigravity-build.list"
 fi
+
 
 # --- Avidemux AppImage (self-contained, no Flatpak runtime needed) ---
 AVIDEMUX_VERSION="2.8.1"
