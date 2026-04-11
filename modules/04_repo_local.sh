@@ -141,6 +141,8 @@ PAQUETES_CRITICOS=(
     vlc
     vlc-plugin-base
     libfuse2
+    acpid
+    acpi-support-base
     xclip
     git
     nodejs
