@@ -1,6 +1,8 @@
 7zip
 accountsservice
 acl
+acpid
+acpi-support-base
 adduser
 adwaita-icon-theme
 alsa-topology-conf
@@ -2019,6 +2021,7 @@ reportbug
 rpcsvc-proto
 rsyslog
 rtkit
+runit-helper
 samba-libs
 sane-airscan
 sane-utils
