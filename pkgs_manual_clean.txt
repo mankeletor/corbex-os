@@ -106,3 +106,4 @@ vorbis-tools
 whiptail
 zlib1g
 zstd
+fonts-noto-color-emoji

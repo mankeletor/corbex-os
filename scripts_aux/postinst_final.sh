@@ -553,6 +553,39 @@ else
 fi
 
 # ─────────────────────────────────────────────
+# 16. Emojis modernos (Google/Noto Color Emoji)
+# ─────────────────────────────────────────────
+log "Configurando prioridad de emojis modernos (Noto Color Emoji)..."
+mkdir -p /etc/fonts/conf.d
+cat > /etc/fonts/local.conf << 'FONT_EOF'
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <alias>
+    <family>sans-serif</family>
+    <prefer>
+      <family>Noto Color Emoji</family>
+    </prefer>
+  </alias>
+  <alias>
+    <family>serif</family>
+    <prefer>
+      <family>Noto Color Emoji</family>
+    </prefer>
+  </alias>
+  <alias>
+    <family>monospace</family>
+    <prefer>
+      <family>Noto Color Emoji</family>
+    </prefer>
+  </alias>
+</fontconfig>
+FONT_EOF
+# Re-links para asegurar que fontconfig lo tome (si no existe)
+ln -sf /etc/fonts/local.conf /etc/fonts/conf.d/99-color-emoji.conf
+log "Prioridad de emojis configurada ✅"
+
+# ─────────────────────────────────────────────
 rm -f /etc/apt/apt.conf.d/99offline-install
 
 log "postinst_final.sh FINALIZADO OK"
