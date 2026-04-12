@@ -524,6 +524,35 @@ rc-update add NetworkManager default 2>/dev/null || true
 rc-update add corbex-firstrun default 2>/dev/null || true
 
 # ─────────────────────────────────────────────
+# 15. Optimizar fstab si el disco raíz es un SSD
+# ─────────────────────────────────────────────
+log "Detectando tipo de disco para optimizaciones en /etc/fstab..."
+# Averiguar el dispositivo de montaje raíz
+ROOT_PART=$(df / | tail -1 | awk '{print $1}')
+# Limpiar el path para buscar en sysfs (ej. /dev/sda1 -> sda)
+ROOT_DISK=$(basename "$ROOT_PART" | sed 's/[0-9]*$//')
+
+# nvme0n1p1 -> nvme0n1, arreglar para los nvme si hubiera
+if echo "$ROOT_DISK" | grep -q 'nvme'; then
+    ROOT_DISK=$(basename "$ROOT_PART" | sed 's/p[0-9]*$//')
+fi
+
+if [ -f "/sys/block/${ROOT_DISK}/queue/rotational" ]; then
+    IS_ROTA=$(cat "/sys/block/${ROOT_DISK}/queue/rotational")
+    if [ "$IS_ROTA" = "0" ]; then
+        log "¡SSD detectado ($ROOT_DISK)! Aplicando 'noatime' en el disco..."
+        # Reemplazar relatime o defaults por noatime en particiones ext4
+        sed -i 's/errors=remount-ro/noatime,errors=remount-ro/g' /etc/fstab
+        # Si ext4 venía con relatime en default partman, pisarlo
+        sed -i 's/relatime/noatime/g' /etc/fstab
+    else
+        log "Disco mecánico ($ROOT_DISK) detectado. Se deja estándar para cuidar RAM."
+    fi
+else
+    log "⚠️ No se pudo determinar el tipo de disco. Ignorando."
+fi
+
+# ─────────────────────────────────────────────
 rm -f /etc/apt/apt.conf.d/99offline-install
 
 log "postinst_final.sh FINALIZADO OK"
