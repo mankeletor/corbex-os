@@ -80,7 +80,7 @@ cd corbex-os
 nano config.env
 
 # 3. Le das masa al script como buen artesano del software
-sudo bash main.sh
+./main.sh
 ```
 
 El proceso de forjado toma entre 15 y 40 minutos dependiendo de tu ancho de banda y la velocidad del espejo (mirror). Al final de la línea de ensamble, te escupe una ISO lista para quemar en un pendrive, con su `.md5` reglamentario.
@@ -95,7 +95,7 @@ Si venís corto de tiempo o querés hacer deploy ya en el aula:
 
 Para quemarla a lo macho en un pendrive (¡Atenti con el comando, que arrasa sin preguntar!):
 ```bash
-sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress && sync
+sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 *(Cambiá `/dev/sdX` por tu USB. Un error acá y te borrás el disco de 1TB, ¡no digas que no te avisé!)* 
 
