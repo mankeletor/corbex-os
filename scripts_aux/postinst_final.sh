@@ -256,18 +256,22 @@ log "PATH configurado ✅"
 #      Esto es más confiable que dconf working-directory
 #      porque funciona siempre, independiente de D-Bus.
 # ─────────────────────────────────────────────
-log "Configurando directorio inicial del terminal para alumno..."
-ALUMNO_HOME="/home/alumno"
-mkdir -p "$ALUMNO_HOME"
+log "Configurando directorio inicial del terminal (.bashrc) para alumno y root..."
+for USER_HOME in "/home/alumno" "/root"; do
+    mkdir -p "$USER_HOME"
+    
+    # Determinar dueño
+    USER_OWNER="root:root"
+    [ "$USER_HOME" = "/home/alumno" ] && USER_OWNER="alumno:alumno"
 
-# Crear .bashrc base si no existe (copia de /etc/skel)
-if [ ! -f "$ALUMNO_HOME/.bashrc" ] && [ -f /etc/skel/.bashrc ]; then
-    cp /etc/skel/.bashrc "$ALUMNO_HOME/.bashrc"
-fi
+    # Crear .bashrc base si no existe (copia de /etc/skel)
+    if [ ! -f "$USER_HOME/.bashrc" ] && [ -f /etc/skel/.bashrc ]; then
+        cp /etc/skel/.bashrc "$USER_HOME/.bashrc"
+    fi
 
-# Agregar el fix al final del .bashrc (idempotente)
-if ! grep -q "corbex-homedir-fix" "$ALUMNO_HOME/.bashrc" 2>/dev/null; then
-    cat >> "$ALUMNO_HOME/.bashrc" << 'BASHRC_FIX'
+    # Agregar el fix al final del .bashrc (idempotente)
+    if [ -f "$USER_HOME/.bashrc" ] && ! grep -q "corbex-homedir-fix" "$USER_HOME/.bashrc" 2>/dev/null; then
+        cat >> "$USER_HOME/.bashrc" << 'BASHRC_FIX'
 
 # CorbexOS: corbex-homedir-fix
 # Si el terminal abre con PWD=/ (bug de autologin+MATE Terminal),
@@ -276,13 +280,14 @@ if [ "$PWD" = "/" ]; then
     cd "$HOME" 2>/dev/null || true
 fi
 BASHRC_FIX
-    log "  ↳ Fix de directorio inicial agregado a .bashrc de alumno ✅"
-fi
+        log "  ↳ Fix de directorio inicial agregado a $USER_HOME/.bashrc ✅"
+    fi
 
-# Asegurar que .bashrc pertenece al usuario alumno
-chown alumno:alumno "$ALUMNO_HOME/.bashrc" 2>/dev/null || true
-chmod 644 "$ALUMNO_HOME/.bashrc"
-log "Directorio inicial del terminal configurado ✅"
+    # Asegurar pertenencia y permisos
+    chown "$USER_OWNER" "$USER_HOME/.bashrc" 2>/dev/null || true
+    chmod 644 "$USER_HOME/.bashrc"
+done
+log "Directorio inicial del terminal configurado para ambos usuarios ✅"
 
 # ─────────────────────────────────────────────
 # 12. Instalar PSeInt offline desde ISO
