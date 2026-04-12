@@ -182,6 +182,7 @@ fonts-freefont-ttf
 fonts-liberation
 fonts-liberation-sans-narrow
 fonts-mathjax
+fonts-noto-color-emoji
 fonts-noto-mono
 fonts-opensymbol
 fonts-symbola
