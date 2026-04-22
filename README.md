@@ -56,7 +56,27 @@ corbex-os/
 └── openspec/                # Infraestructura de Spec-Driven Development (SDD/ATL).
 ```
 ### 🪟 Usuarios de Windows (El camino del Arquitecto)
+
 Ni te gastes intentando esto con MinGW, Git Bash o Cygwin. No estamos compilando un scriptcito; estamos forjando un sistema operativo. Para que la ISO mantenga los permisos de archivos correctos y las herramientas de Debian funcionen, necesitás un Linux real.
+
+La forma profesional de hacerlo en Windows es con **WSL2 (Windows Subsystem for Linux)**:
+
+1. **Instalá WSL2** (si no lo tenés):
+   Abrí una PowerShell como Administrador y ejecutá:
+   ```powershell
+   wsl --install -d Debian
+   ```
+   *(Reiniciá la PC si te lo pide. No seas ansioso).*
+
+2. **Prepará el entorno en WSL2:**
+   Abrí la terminal de Debian que acabás de instalar y tirá este comando para tener todas las herramientas listas:
+   ```bash
+   sudo apt update && sudo apt install xorriso rsync cpio dpkg-dev mtools wget curl git
+   ```
+
+3. **Cloná y dale masa:**
+   Ahora seguí las mismas instrucciones de build que figuran abajo, pero recordá hacerlo siempre **dentro** de tu terminal de WSL2.
+
 ---
 
 ## 🛠️ Cómo Compilar a esta Bestia
