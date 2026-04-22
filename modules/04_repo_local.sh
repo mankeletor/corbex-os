@@ -162,6 +162,7 @@ PAQUETES_CRITICOS=(
     grub-pc-bin
     grub-efi-amd64-bin
     efibootmgr
+    rdate
 )
 PAQUETES_SEMILLA+=("${PAQUETES_CRITICOS[@]}")
 
@@ -423,6 +424,13 @@ else
 fi
 
 echo "✅ Extras offline listos en $EXTRAS_DIR"
+
+# 5. Generar archivo de versión
+echo "   Generando archivos de versión en el root de la ISO..."
+BUILD_VERSION="CorbexOS ${ISO_PREFIX} Build $(date '+%Y-%m-%d %H:%M')"
+echo "$BUILD_VERSION" > "$ISO_HOME/corbex-version"
+echo "$BUILD_VERSION" > "$ISO_HOME/corvex_version"
+echo "✅ Archivos de versión creados: $BUILD_VERSION"
 
 rm -rf "$EXTRACT_DIR" "$APT_SANDBOX"
 [ "${TMPDIR_CREATED:-false}" = true ] && rm -rf "$TMP_DIR"

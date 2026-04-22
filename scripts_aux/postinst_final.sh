@@ -32,10 +32,14 @@ EOF
 # ─────────────────────────────────────────────
 # 1. Idioma y locales (✅ seguro en chroot)
 # ─────────────────────────────────────────────
-log "Configurando idioma es_AR.UTF-8..."
+log "Configurando idioma es_AR.UTF-8 y Zona Horaria (Cordoba)..."
 echo "es_AR.UTF-8 UTF-8" > /etc/locale.gen
 locale-gen es_AR.UTF-8
 update-locale LANG=es_AR.UTF-8
+
+# Zona Horaria Córdoba
+ln -sf /usr/share/zoneinfo/America/Argentina/Cordoba /etc/localtime
+echo "America/Argentina/Cordoba" > /etc/timezone
 
 # ─────────────────────────────────────────────
 # 2. Paquetes manuales (✅ repos ya configurados)
@@ -401,7 +405,8 @@ exec > >(tee -a "$FLOG") 2>&1
 flog() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 
 flog "=== CorbexOS Firstrun iniciado ==="
-flog "Version: $(cat /etc/corbex-version 2>/dev/null || echo 'unknown')"
+VERSION=$(cat /etc/corvex_version 2>/dev/null || cat /etc/corbex-version 2>/dev/null || echo 'unknown')
+flog "Version: $VERSION"
 flog "Hardware: $(dmidecode -s system-product-name 2>/dev/null || echo 'unknown')"
 
 # --- 1. Configurar terminal para usuario alumno ---
@@ -477,8 +482,12 @@ rm -f /etc/apt/apt.conf.d/99corbex-firstrun
 #     /usr/sbin/ntpdate como drop-in replacement.
 #     Fallback: sntp (de ntpsec) o chronyc si está disponible.
 (
-    flog "Sincronizando hora vía NTP..."
-    if command -v ntpdate >/dev/null 2>&1; then
+    flog "Sincronizando hora vía NTP/RDATE..."
+    if command -v rdate >/dev/null 2>&1; then
+        timeout 15 rdate -s time-a.nist.gov && hwclock --systohc 2>/dev/null \
+            && flog "Hora sincronizada con rdate (NIST) ✅" \
+            || flog "⚠️ rdate falló o timeout"
+    elif command -v ntpdate >/dev/null 2>&1; then
         timeout 15 ntpdate -u pool.ntp.org 2>/dev/null \
             && hwclock --systohc 2>/dev/null \
             && flog "Hora sincronizada con ntpdate ✅" \

@@ -2017,6 +2017,7 @@ python-caja-common
 qt5-gtk-platformtheme
 qttranslations5-l10n
 qtwayland5
+rdate
 readline-common
 reportbug
 rpcsvc-proto

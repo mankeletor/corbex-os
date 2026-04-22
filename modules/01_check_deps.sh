@@ -14,7 +14,7 @@ if [ -z "${ISO_ORIGINAL:-}" ]; then
 fi
 
 # 1. Verificar comandos necesarios
-for cmd in cpio gzip xorriso curl rsync wget awk sed dpkg-scanpackages apt-ftparchive mcopy mdel; do
+for cmd in cpio gzip xorriso curl rsync wget awk sed dpkg-scanpackages apt-ftparchive mcopy mdel rdate; do
     if ! command -v $cmd &> /dev/null; then
         echo "❌ Error: $cmd no está instalado."
         if [ "$cmd" = "dpkg-scanpackages" ]; then
@@ -28,6 +28,10 @@ for cmd in cpio gzip xorriso curl rsync wget awk sed dpkg-scanpackages apt-ftpar
         exit 1
     fi
 done
+
+# Sincronización inicial del reloj (para evitar fallos SSL en curl/apt)
+echo "   Sincronizando reloj con time-a.nist.gov..."
+rdate -s time-a.nist.gov || echo "⚠️ Advertencia: No se pudo sincronizar el reloj. Verifique su conexión."
 
 # 2. Verificar existencia de ISOs base
 if [ ! -f "$ISO_ORIGINAL" ]; then

@@ -6,6 +6,7 @@ set -euo pipefail
 
 VERSION="1.0"
 export BASE_DIR="$(pwd)"
+export PATH="$PATH:/usr/sbin:/sbin"
 
 # 0. Manejo de Argumentos
 CLEAN_ARG=""

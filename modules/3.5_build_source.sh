@@ -1,7 +1,7 @@
 #!/bin/bash
-# CorbexOS - Generador Dinámico de Repositorios
+# CorvexOS - Generador Dinámico de Repositorios
 # Uso: ${0##*/} "dev1mir.registrationsplus.net"
-#
+# Nombre: corbex-build-sources.sh
 # Requiere: bash (usa export -f, arrays asociativos, process substitution)
 # Sin set -e: errores manejados explícitamente para no interferir con el discovery.
 #
