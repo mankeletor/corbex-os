@@ -55,7 +55,8 @@ corbex-os/
 ├── templates/               # Plantillas estructurales (MATE, GRUB, ISOLINUX).
 └── openspec/                # Infraestructura de Spec-Driven Development (SDD/ATL).
 ```
-
+### 🪟 Usuarios de Windows (El camino del Arquitecto)
+Ni te gastes intentando esto con MinGW, Git Bash o Cygwin. No estamos compilando un scriptcito; estamos forjando un sistema operativo. Para que la ISO mantenga los permisos de archivos correctos y las herramientas de Debian funcionen, necesitás un Linux real.
 ---
 
 ## 🛠️ Cómo Compilar a esta Bestia
