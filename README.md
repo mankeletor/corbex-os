@@ -112,7 +112,7 @@ El proceso de forjado toma entre 15 y 40 minutos dependiendo de tu ancho de band
 
 Si venís corto de tiempo o querés hacer deploy ya en el aula:
 
-> 🚀 **[Descargar CorbexOS ISO (MEGA)](https://mega.nz/file/LMtGmCrA#wyPxGEqX9PXsTSx9n4wTBC1nX8ioFyDHzSM6qZTD8yo)** (untested)
+> 🚀 **[Descargar CorbexOS ISO (MEGA)](https://mega.nz/file/Occl3L5D#U6vGvZylIdx3_LyfPUB5lXNgAsljLsDr2ZMzXLh7nps)** (untested)
 > 📄 `devuan-corbexos-20260412_1202.iso.md5` | [Verificación MD5 (MEGA)](https://mega.nz/file/WZVA0YIL#IafmZEXa_uL3R4ilRH9G57drjaEqP4PbamXGDGfVmq0)
 
 Para quemarla en un pendrive:
