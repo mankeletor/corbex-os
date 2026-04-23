@@ -115,11 +115,16 @@ Si venís corto de tiempo o querés hacer deploy ya en el aula:
 > 🚀 **[Descargar CorbexOS ISO (MEGA)](https://mega.nz/file/LMtGmCrA#wyPxGEqX9PXsTSx9n4wTBC1nX8ioFyDHzSM6qZTD8yo)** (untested)
 > 📄 `devuan-corbexos-20260412_1202.iso.md5` | [Verificación MD5 (MEGA)](https://mega.nz/file/WZVA0YIL#IafmZEXa_uL3R4ilRH9G57drjaEqP4PbamXGDGfVmq0)
 
-Para quemarla a lo macho en un pendrive (¡Atenti con el comando, que arrasa sin preguntar!):
-```bash
-sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress oflag=sync
-```
-*(Cambiá `/dev/sdX` por tu USB. Un error acá y te borrás el disco de 1TB, ¡no digas que no te avisé!)* 
+Para quemarla en un pendrive:
+
+*   **En Linux (a lo alfa):**
+    ```bash
+    sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress oflag=sync
+    ```
+    *(Cambiá `/dev/sdX` por tu USB. Un error acá y te borrás el disco de 1TB, ¡no digas que no te avisé!)* 
+
+*   **En Windows:**
+    Usá **[Rufus](https://rufus.ie/)** en modo "DD" (si te pregunta) para asegurar la compatibilidad con el esquema de particionado híbrido.
 
 ---
 
