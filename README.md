@@ -114,7 +114,7 @@ Si venís corto de tiempo o querés hacer deploy ya en el aula:
 
 > 🚀 **[Descargar CorbexOS ISO (MEGA)](https://mega.nz/file/Occl3L5D#U6vGvZylIdx3_LyfPUB5lXNgAsljLsDr2ZMzXLh7nps)** (untested)
 > 🚀 **[Mirror 2 (Google Drive)](https://drive.google.com/file/d/1kuTquC53vTfIzVaHbDzk9Rnfn-6jYQ1U/view?usp=drive_link)** (untested)
-> 📄 `devuan-corbexos-20260412_1202.iso.md5` | [Verificación MD5 (MEGA)](https://mega.nz/file/WZVA0YIL#IafmZEXa_uL3R4ilRH9G57drjaEqP4PbamXGDGfVmq0)
+> 📄 `devuan-corbexos-20260412_1202.iso.md5` | [Verificación MD5 (MEGA)](https://mega.nz/file/DVUy1bhJ#BmLRC9YoxJn1l_aXL12JAsL9fD5MoLK5anx6UP1FdJg)
 
 Para quemarla en un pendrive:
 
