@@ -248,7 +248,10 @@ process_pkg() {
     local count=0
     
     # 1. ¿Está en base? (Inmutabilidad estricta)
-    if grep -q "^${pkg}$" "$BASE_PKGS_FILE"; then return 0; fi
+    # EXCEPCIÓN: Forzamos la inclusión de los cargadores de arranque para asegurar el modo Dual
+    if [[ "$pkg" != "grub-pc" && "$pkg" != "grub-efi-amd64" ]]; then
+        if grep -q "^${pkg}$" "$BASE_PKGS_FILE"; then return 0; fi
+    fi
 
     # 2. Buscar en índice de Pool1
     local DEB_PATH
