@@ -219,7 +219,6 @@ log "Limpieza parcial..."
 apt-get purge -y xterm 2>/dev/null || true
 apt-get clean
 rc-update add openntpd default
-rc-service openntpd start || true
 
 
 # ─────────────────────────────────────────────
@@ -601,6 +600,42 @@ log "Prioridad de emojis configurada ✅"
 
 # ─────────────────────────────────────────────
 rm -f /etc/apt/apt.conf.d/99offline-install
+
+# ─────────────────────────────────────────────
+# 17. Cargador de Arranque (GRUB) Dual Support
+# ─────────────────────────────────────────────
+log "=== Configurando Cargador de Arranque (Modo Dual) ==="
+if [ -d /sys/firmware/efi ]; then
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --force-yes \
+        -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+        grub-efi-amd64 < /dev/null
+    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=corbex --recheck --no-nvram
+else
+    log "📟 Modo Legacy/BIOS detectado. Asegurando grub-pc..."
+    # Detectar disco de forma robusta
+    ROOT_PART=$(df / | grep "^/" | head -n1 | awk '{print $1}')
+    ROOT_DISK=$(echo "$ROOT_PART" | sed 's/p*[0-9]*$//')
+    
+    if [ -z "$ROOT_DISK" ] || [ "$ROOT_DISK" = "/dev/root" ]; then
+        log "  ⚠️ Detección fallida ($ROOT_DISK), intentando via fdisk..."
+        ROOT_DISK="/dev/$(lsblk -no pkname "$ROOT_PART" 2>/dev/null || fdisk -l 2>/dev/null | grep "^/dev/" | head -n1 | awk '{print $1}' | sed 's/p*[0-9]*$//')"
+    fi
+    [ -z "$ROOT_DISK" ] && ROOT_DISK="/dev/sda"
+
+    log "  ↳ Instalando grub-pc en $ROOT_DISK..."
+    echo "grub-pc grub-pc/install_devices multiselect $ROOT_DISK" | debconf-set-selections
+    echo "grub-pc grub-pc/install_devices_empty boolean false" | debconf-set-selections
+    
+    UCF_FORCE_CONFOLD=1 DEBIAN_FRONTEND=noninteractive \
+        apt-get install -y --force-yes \
+        -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+        grub-pc < /dev/null
+        
+    grub-install --target=i386-pc "$ROOT_DISK"
+fi
+
+log "Actualizando menú de arranque..."
+update-grub < /dev/null
 
 log "postinst_final.sh FINALIZADO OK"
 echo "$(date '+%Y-%m-%d %H:%M:%S') - FINALIZADO OK" >> "$LOG"
