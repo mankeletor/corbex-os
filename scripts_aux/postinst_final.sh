@@ -21,13 +21,24 @@ log "=== Optimizando sistema para CorbexOS ==="
 # ─────────────────────────────────────────────
 # 0. Blindaje Offline (Evitar cuelgues de red)
 # ─────────────────────────────────────────────
-log "Aplicando configuración APT offline (timeout corto)..."
+log "Aplicando configuración APT offline (estricta)..."
 cat > /etc/apt/apt.conf.d/99offline-install << 'EOF'
 Acquire::Retries "0";
-Acquire::http::Timeout "3";
-Acquire::https::Timeout "3";
+Acquire::http::Timeout "2";
+Acquire::https::Timeout "2";
 APT::Get::Assume-Yes "true";
+APT::Get::AllowUnauthenticated "true";
 EOF
+
+# Mover temporalmente sources.list para que apt solo vea el CDROM
+# Esto evita que 'apt-get update' intente conectar a los mirrors de Devuan.
+if [ -f /etc/apt/sources.list ]; then
+    mv /etc/apt/sources.list /etc/apt/sources.list.offline
+    # El preseed configuró local0 como file:///cdrom, 
+    # pero d-i suele crear un sources.list con el mirror oficial.
+    # Forzamos solo el CDROM para este script:
+    echo "deb [trusted=yes] file:///cdrom excalibur main local" > /etc/apt/sources.list
+fi
 
 # ─────────────────────────────────────────────
 # 1. Idioma y locales (✅ seguro en chroot)
@@ -599,9 +610,6 @@ ln -sf /etc/fonts/local.conf /etc/fonts/conf.d/99-color-emoji.conf
 log "Prioridad de emojis configurada ✅"
 
 # ─────────────────────────────────────────────
-rm -f /etc/apt/apt.conf.d/99offline-install
-
-# ─────────────────────────────────────────────
 # 17. Cargador de Arranque (GRUB) Dual Support
 # ─────────────────────────────────────────────
 log "=== Configurando Cargador de Arranque (Modo Dual) ==="
@@ -636,6 +644,14 @@ fi
 
 log "Actualizando menú de arranque..."
 update-grub < /dev/null
+
+# ─────────────────────────────────────────────
+# 18. Limpieza y Restauración de APT (Final)
+# ─────────────────────────────────────────────
+rm -f /etc/apt/apt.conf.d/99offline-install
+if [ -f /etc/apt/sources.list.offline ]; then
+    mv /etc/apt/sources.list.offline /etc/apt/sources.list
+fi
 
 log "postinst_final.sh FINALIZADO OK"
 echo "$(date '+%Y-%m-%d %H:%M:%S') - FINALIZADO OK" >> "$LOG"
