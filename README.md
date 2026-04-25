@@ -138,7 +138,7 @@ El proceso de forjado toma entre 15 y 40 minutos dependiendo de tu ancho de band
 
 Si venís corto de tiempo o querés hacer deploy ya en el aula:
 
-> 🚀 **[devuan-corbexos-20260424_1446.iso (MEGA)](https://mega.nz/file/HQNhFRTa#mb_GSOsTT307xc5GRQO9Pl-v-BOvWV8NJnljma67Nvc)** (untested)
+> 🚀 **[devuan-corbexos-20260424_1446.iso (MEGA)](https://mega.nz/file/HQNhFRTa#mb_GSOsTT307xc5GRQO9Pl-v-BOvWV8NJnljma67Nvc)** (stable)
 >
 > 📄 **[devuan-corbexos-20260424_1446.iso.md5 (MEGA)](https://mega.nz/file/rJlF3STR#8qBrjfQYnOiMkORubhQnHQCOqgUBa0Nnr-TcecHYpcc)**
 
