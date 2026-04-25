@@ -44,6 +44,22 @@ Desde el primer commit el **27 de febrero**, CorbexOS no paró de crecer. Lo que
 
 ---
 
+## 🏛️ Historia y Casos de Éxito: IPEM 442 (Proyecto PIE)
+
+El **IPEM 442** es originalmente una escuela con orientación en Educación Física, pero la visión de sus docentes y el hambre de aprender de los pibes llevaron a la institución a sumarse al **Proyecto de Innovación Educativa (PIE)** de CorbexOS. 
+
+Aunque la especialidad en Programación es un plan a futuro, CorbexOS ya está funcionando como base tecnológica para que los alumnos empiecen a familiarizarse con entornos de desarrollo reales y herramientas de pensamiento lógico.
+
+### 🖼️ Evidencia del Despliegue Bare-Metal
+
+![Netbook Conectar Igualdad - IPEM 442](Images/WhatsApp%20Image%202026-04-20%20at%2021.17.18%20(2).jpeg)
+*La primera unidad desplegada en el IPEM 442 sobre hardware de Conectar Igualdad.*
+
+![Consumo de RAM optimizado](Images/WhatsApp%20Image%202026-04-20%20at%2021.17.16%20(2).jpeg)
+*Eficiencia extrema: CorbexOS corriendo MATE con apenas ~750MB de RAM, dejando el resto libre para que las herramientas de programación respiren.*
+
+---
+
 ## 📂 Estructura Modular del Repositorio
 
 Acá programamos dividiendo los problemas grandes en piezas chicas. Fijate el esquema:
