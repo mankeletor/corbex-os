@@ -2,7 +2,7 @@
 
 > *"El año pasado customicé Linux Mint MATE para las notebooks escolares de las ESFP de Córdoba — equivalente a comprar un auto base y llevarlo al taller de tuning. Este año con CorbexOS, pedimos el auto customizado directamente desde la fábrica. ¡Pasamos del taller a la fábrica, papá!"*
 
-CorbexOS no es un scriptcito más de post-configuración armado a las apuradas. Es una imagen ISO de **Devuan GNU/Linux (Excalibur)** construida *desde cero* y pensada con arquitectura pura para las netbooks de las escuelas secundarias de Córdoba. 
+CorbexOS no es un scriptcito más de post-configuración armado a las apuradas. Es una imagen ISO de **Devuan GNU/Linux (Excalibur)** construida *desde cero* y pensada con arquitectura pura para las netbooks de las escuelas secundarias de Córdoba con orientación en programación. 
 
 Acá no hay inmediatez ni atajos baratos: la ISO sale del horno con el sistema, el escritorio MATE, software educativo pesado, firmwares blindados (`hw-detect`), y la red preconfigurada. El técnico enchufa el USB, bootea, y la máquina se instala sola (100% desatendida) mientras se toma unos buenos mates. 
 
