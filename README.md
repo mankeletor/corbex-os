@@ -56,7 +56,7 @@ Aunque la especialidad en Programación es un plan a futuro, CorbexOS ya está f
 *La primera unidad desplegada en el IPEM 442 sobre hardware de Conectar Igualdad.*
 
 ![Consumo de RAM optimizado](Images/WhatsApp%20Image%202026-04-20%20at%2021.17.16%20(2).jpeg)
-*Eficiencia extrema: CorbexOS corriendo MATE con apenas ~750MB de RAM, dejando el resto libre para que las herramientas de programación respiren.*
+*Eficiencia extrema: CorbexOS corriendo MATE con apenas ~750MB de RAM, dejando el resto libre para el usuario.*
 
 ---
 
