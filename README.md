@@ -157,7 +157,7 @@ Para quemarla en un pendrive:
 
 ## 👤 Creador de la Criatura
 
-**Pablo Saquilán (DJ Mankeletor)** — Maintainer, PM - Software Engineer - Senior Dev (según la IA porque andamos flojos de papeles) y profe de matemática.
+**Pablo Saquilán (DJ Mankeletor)** — Maintainer, PM - Software Engineer - Senior Dev (según la IA porque andamos flojos de papeles 😂) y profe de matemática.
 📧 [psaquilan82@gmail.com](mailto:psaquilan82@gmail.com)
 
 *Hecho desde las trincheras de la educación pública cordobesa para el mundo.*
