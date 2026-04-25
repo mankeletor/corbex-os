@@ -30,7 +30,7 @@ Devuan corre sobre la gloria de **OpenRC** en lugar del monolítico systemd, lo 
 | **IDE Educativo** | Antigravity (Instalación automática y offline). |
 | **Drivers** | NetworkManager y blindaje de firmwares Intel/Realtek para bare-metal. |
 | **Instalación** | Archivo `preseed.cfg` inyectado para un deploy desatendido, anti-errores y sin humanos en el medio. |
-| **Idioma** | Español (Rioplatense / Argentina) de punta a punta. |
+| **Idioma** | Español (Argentina) de punta a punta. |
 | **Estado** | **v1.0 Stable** — Lista para el despliegue en aulas. |
 
 ## 📊 Estadísticas del Proyecto (Growth Report)
