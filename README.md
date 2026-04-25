@@ -46,7 +46,7 @@ Desde el primer commit el **27 de febrero**, CorbexOS no paró de crecer. Lo que
 
 ## 🏛️ Historia y Casos de Éxito: IPEM 442 (Proyecto PIE)
 
-El **IPEM 442** es originalmente una escuela con orientación en Educación Física, pero la visión de sus docentes y el hambre de aprender de los pibes llevaron a la institución a sumarse al **Proyecto de Innovación Educativa (PIE)** de CorbexOS. 
+El **IPEM 442** es originalmente una escuela con orientación en Educación Física, pero la visión del equipo de gestión y el hambre de aprender de los pibes llevaron a la institución a sumarse al **Proyecto de Innovación Educativa (PIE)** de CorbexOS. 
 
 Aunque la especialidad en Programación es un plan a futuro, CorbexOS ya está funcionando como base tecnológica para que los alumnos empiecen a familiarizarse con entornos de desarrollo reales y herramientas de pensamiento lógico.
 
