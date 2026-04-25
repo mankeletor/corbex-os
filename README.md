@@ -48,7 +48,7 @@ Desde el primer commit el **27 de febrero**, CorbexOS no paró de crecer. Lo que
 
 El **IPEM 442** es originalmente una escuela con orientación en Educación Física, pero la visión del equipo de gestión y el hambre de aprender de los pibes llevaron a la institución a sumarse al **Proyecto de Innovación Educativa (PIE)** de CorbexOS. 
 
-Aunque la especialidad en Programación es un plan a futuro, CorbexOS ya está funcionando como base tecnológica para que los alumnos empiecen a familiarizarse con entornos de desarrollo reales y herramientas de pensamiento lógico.
+Aunque la especialidad en Programación es un plan a futuro, CorbexOS ya está funcionando como base tecnológica para que los alumnos empiecen a familiarizarse con entornos de desarrollo reales, herramientas de pensamiento lógico, programación y de paso dejar usable los equipos (o viceversa, según como lo quieras ver).
 
 ### 🖼️ Evidencia del Despliegue Bare-Metal
 
