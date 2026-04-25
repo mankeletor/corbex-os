@@ -31,6 +31,16 @@ Devuan corre sobre la gloria de **OpenRC** en lugar del monolítico systemd, lo 
 | **Drivers** | NetworkManager y blindaje de firmwares Intel/Realtek para bare-metal. |
 | **Instalación** | Archivo `preseed.cfg` inyectado para un deploy desatendido, anti-errores y sin humanos en el medio. |
 | **Idioma** | Español (Rioplatense / Argentina) de punta a punta. |
+| **Estado** | **v1.0 Stable** — Lista para el despliegue en aulas. |
+
+## 📊 Estadísticas del Proyecto (Growth Report)
+
+Desde el primer commit el **27 de febrero**, CorbexOS no paró de crecer. Lo que empezó como una necesidad se convirtió en una herramienta de despliegue industrial:
+
+- 🔨 **260 Commits**: Un promedio de 4 mejoras diarias durante 2 meses.
+- 📂 **Madurez**: Pasamos de un par de scripts a una arquitectura modular de 5 etapas con inyección de `initrd` y repositorios offline.
+- 📐 **Escala**: ~2,500 líneas de lógica técnica (Shell/Preseed) orquestando la instalación de miles de paquetes.
+- 🚀 **Resultado**: Una ISO robusta, desatendida y blindada para el hardware escolar.
 
 ---
 
