@@ -144,7 +144,7 @@ Si venís corto de tiempo o querés hacer deploy ya en el aula:
 
 Para quemarla en un pendrive:
 
-*   **En Linux (a lo alfa):**
+*   **En Linux:**
     ```bash
     sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress oflag=sync
     ```
