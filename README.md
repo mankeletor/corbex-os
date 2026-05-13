@@ -38,8 +38,8 @@ Devuan corre sobre la gloria de **OpenRC** en lugar del monolítico systemd, lo 
 Desde el primer commit el **27 de febrero**, CorbexOS no paró de crecer. Lo que empezó como una necesidad se convirtió en una herramienta de despliegue industrial:
 
 - 🔨 **260 Commits**: Un promedio de 4 mejoras diarias durante 2 meses.
-- 📂 **Madurez**: Pasamos de un par de scripts a una arquitectura modular de 5 etapas con inyección de `initrd` y repositorios offline.
-- 📐 **Escala**: ~2,500 líneas de lógica técnica (Shell/Preseed) orquestando la instalación de miles de paquetes.
+- 📂 **Madurez**: Pasamos de un par de scripts a una arquitectura modular de 7 módulos con inyección `initrd`, repositorios offline y bootstrap compartido.
+- 📐 **Escala**: ~2,250 líneas de lógica técnica (Shell/Preseed) orquestando la instalación de miles de paquetes.
 - 🚀 **Resultado**: Una ISO robusta, desatendida y blindada para el hardware escolar.
 
 ---
@@ -71,11 +71,13 @@ corbex-os/
 ├── preseed.cfg              # El cerebro desatendido: LVM, usuarios, GRUB.
 ├── rc.conf                  # Tweaks de OpenRC.
 ├── modules/                 # (Las tripas del build)
+│   ├── _common.sh           # Bootstrap compartido (config + rutas).
 │   ├── 01_check_deps.sh     # Chequeo de dependencias vitales.
-│   ├── 02_extract_iso.sh    # Operación a la ISO Netinstall base.
-│   ├── 03_build_initrd.sh   # Cirugía mayor al initrd (inyección de preseed).
-│   ├── 04_repo_local.sh     # Armado de repositorio offline de chapa y pintura.
-│   └── 05_build_iso.sh      # El reensamblado magistral con xorriso.
+│   ├── 02_extract_iso.sh    # Extracción de la ISO Netinstall base.
+│   ├── 03_build_initrd.sh   # Cirugía al initrd (inyección de preseed).
+│   ├── 04_repo_local.sh     # Repositorio offline + resolución de dependencias.
+│   ├── 04.5_build_source.sh # Generador dinámico de sources.list.
+│   └── 05_build_iso.sh      # Reensamblado con xorriso.
 ├── scripts_aux/
 │   └── postinst_final.sh    # Remate de configuración en el chroot del target.
 ├── templates/               # Plantillas estructurales (MATE, GRUB, ISOLINUX).
