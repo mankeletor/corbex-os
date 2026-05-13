@@ -4,12 +4,7 @@ set -euo pipefail
 
 echo "📦 [Módulo 03] Modificando Initrd e Inyectando archivos..."
 
-# Cargar configuración
-# Carga de configuración corregida
-if [ -z "$ISO_ORIGINAL" ]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    source "$SCRIPT_DIR/../config.env"
-fi
+source "$(dirname "$0")/_common.sh"
 
 # 1. Cargar paquetes desde pkgs_install.txt (Lista unificada pre-procesada)
 PKGS_INSTALL_FILE="$BASE_DIR/pkgs_install.txt"
@@ -43,8 +38,7 @@ wireless-tools iw rfkill curl rdate; do
 done
 
 # 2. Preparar el Payload a Inyectar (Método Overlay)
-# En lugar de extraer el initrd (que rompe permisos si no sos root), 
-# armamos un mini initrd solo con nuestra inyección y lo concatenamos al final.
+# Usamos método overlay: mini initrd con nuestra inyección concatenado al final.
 
 local_initrd="$ISO_HOME/boot/isolinux/initrd.gz"
 [ ! -f "${local_initrd}.original" ] && cp "$local_initrd" "${local_initrd}.original"
@@ -54,12 +48,12 @@ cd "$WORKDIR/payload_initrd"
 
 # 3. Preparar archivos críticos
 echo "   Preparando preseed, postinst, rc.conf y listas de paquetes para el Overlay..."
-cp "$BASE_DIR/templates/preseed.cfg" ./preseed.cfg
+cp "$BASE_DIR/preseed.cfg" ./preseed.cfg
 cp "$BASE_DIR/scripts_aux/postinst_final.sh" ./postinst.sh
 cp "$BASE_DIR/templates/rc.conf" ./rc.conf
 cp "$BASE_DIR/templates/corbex.dconf" ./corbex.dconf
 cp "$BASE_DIR/pkgs_install.txt" ./pkgs_install.txt
-cp "$BASE_DIR/modules/3.5_build_source.sh" corbex-build-sources.sh
+cp "$BASE_DIR/modules/04.5_build_source.sh" corbex-build-sources.sh
 chmod +x corbex-build-sources.sh
 
 # 🔥 DUAL-INJECT: Copiamos todo esto directamente a la raíz de la ISO

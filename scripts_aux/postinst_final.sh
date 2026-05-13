@@ -415,7 +415,7 @@ exec > >(tee -a "$FLOG") 2>&1
 flog() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"; }
 
 flog "=== CorbexOS Firstrun iniciado ==="
-VERSION=$(cat /etc/corvex_version 2>/dev/null || cat /etc/corbex-version 2>/dev/null || echo 'unknown')
+VERSION=$(cat /etc/corbex-version 2>/dev/null || echo 'unknown')
 flog "Version: $VERSION"
 flog "Hardware: $(dmidecode -s system-product-name 2>/dev/null || echo 'unknown')"
 

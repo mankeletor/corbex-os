@@ -1,21 +1,11 @@
 #!/bin/bash
 # modules/04_repo_local.sh
-# Lógica Complementaria Robusta v0.99rc26
+# Repositorio local offline + extras
 set -euo pipefail
 
-# Cargar configuración y asegurar BASE_DIR
-if [ -z "${BASE_DIR:-}" ]; then
-    BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-fi
+source "$(dirname "${BASH_SOURCE[0]}")/_common.sh"
 
-if [ -f "$BASE_DIR/config.env" ]; then
-    source "$BASE_DIR/config.env"
-else
-    echo "❌ Error: config.env no encontrado en $BASE_DIR"
-    exit 1
-fi
-
-# Redirección de logs (Cerebro v0.99rc25)
+# Redirección de logs
 # Usar WORKDIR de config.env o fallback al directorio actual
 WORKDIR="${WORKDIR:-$BASE_DIR/custom_corbex}"
 PKG_CACHE="$BASE_DIR/pkg_cache"
@@ -41,7 +31,7 @@ if [ "$CLEAN_MODE" = true ]; then
     find "$PKG_CACHE" -name "*.deb" -type f -delete
 fi
 
-# Optimización de hilos (Max segura)
+# Hilos: CPU + 1 (máx 8)
 CPU_COUNT=$(nproc)
 THREADS=$((CPU_COUNT + 1))
 [ "$THREADS" -gt 8 ] && THREADS=8
@@ -60,10 +50,10 @@ mkdir -p "$APT_SANDBOX/var/log/apt"
 
 SOURCES_OUTPUT=""
 BUILD_SOURCE_EXIT=0
-SOURCES_OUTPUT=$("$BASE_DIR/modules/3.5_build_source.sh" "dev1mir.registrationsplus.net" 2>>"$LOG_FILE") || BUILD_SOURCE_EXIT=$?
+SOURCES_OUTPUT=$("$BASE_DIR/modules/04.5_build_source.sh" "dev1mir.registrationsplus.net" 2>>"$LOG_FILE") || BUILD_SOURCE_EXIT=$?
 
 if [ "$BUILD_SOURCE_EXIT" -ne 0 ] || [ -z "$SOURCES_OUTPUT" ]; then
-    echo "⚠️  3.5_build_source.sh falló (exit $BUILD_SOURCE_EXIT). Usando sources.list de fallback." | tee -a "$WARN_LOG"
+    echo "⚠️  04.5_build_source.sh falló (exit $BUILD_SOURCE_EXIT). Usando sources.list de fallback." | tee -a "$WARN_LOG"
     SOURCES_OUTPUT="deb http://dev1mir.registrationsplus.net/devuan/merged ${RELEASE:-excalibur} main contrib non-free non-free-firmware\ndeb http://dev1mir.registrationsplus.net/merged ${RELEASE:-excalibur}-security main contrib non-free non-free-firmware"
 else
     echo "   ✅ Mirror resuelto correctamente."
@@ -174,7 +164,7 @@ PAQUETES_ADICIONALES_REPOS=(grub-pc grub-efi-amd64)
 # Exportar la lista base (se actualizará tras la resolución)
 printf "%s\n" "${PAQUETES_SEMILLA[@]}" | grep -vE "^(grub-pc|grub-efi-amd64)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
 
-# 0.1 Resolución de Dependencias Recursivas (Cerebro v0.99rc27)
+# 0.1 Resolución de dependencias recursivas vía simulación APT
 echo "   Resolviendo dependencias recursivas mediante simulación APT..."
 # Incluimos los metapaquetes de GRUB para la resolución uno por uno si es necesario, 
 # o simplemente los añadimos a la lista final de descarga.
@@ -211,8 +201,6 @@ else
 fi
 
 sed -i '/^$/d' "$BASE_DIR/pkgs_offline.txt"
-
-#echo "   ✅ Total de paquetes únicos a procesar (manual + dependencias): ${#PAQUETES[@]}"
 
 # Directorios
 mkdir -p "$ISO_HOME/pool/local"
@@ -333,9 +321,8 @@ done)
 EOF
 
 # ─────────────────────────────────────────────
-# EXTRAS OFFLINE: PSeInt + Antigravity + Avidemux + Google Chrome
-# Se descargan en build time y se incluyen en la ISO.
-# El postinst los instala desde /root/extras/ dentro del chroot.
+# Extras offline (PSeInt, Antigravity, Avidemux, Chrome)
+# Se descargan en build time y se instalan vía postinst
 # ─────────────────────────────────────────────
 EXTRAS_DIR="$ISO_HOME/extras"
 mkdir -p "$EXTRAS_DIR/antigravity"
@@ -432,8 +419,7 @@ echo "✅ Extras offline listos en $EXTRAS_DIR"
 echo "   Generando archivos de versión en el root de la ISO..."
 BUILD_VERSION="CorbexOS ${ISO_PREFIX} Build $(date '+%Y-%m-%d %H:%M')"
 echo "$BUILD_VERSION" > "$ISO_HOME/corbex-version"
-echo "$BUILD_VERSION" > "$ISO_HOME/corvex_version"
-echo "✅ Archivos de versión creados: $BUILD_VERSION"
+echo "✅ Archivo de versión creado: $BUILD_VERSION"
 
 rm -rf "$EXTRACT_DIR" "$APT_SANDBOX"
 [ "${TMPDIR_CREATED:-false}" = true ] && rm -rf "$TMP_DIR"

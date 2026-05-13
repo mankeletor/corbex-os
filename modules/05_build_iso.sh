@@ -4,12 +4,7 @@ set -euo pipefail
 
 echo "💿 [Módulo 05] Reconstruyendo ISO final con Xorriso..."
 
-# Cargar configuración
-# Carga de configuración corregida
-if [ -z "$ISO_ORIGINAL" ]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    source "$SCRIPT_DIR/../config.env"
-fi
+source "$(dirname "$0")/_common.sh"
 
 # Nombre del archivo ISO final
 ISO_FILENAME="${ISO_PREFIX}-$(date +%Y%m%d_%H%M).iso"
@@ -32,7 +27,7 @@ if command -v mcopy > /dev/null 2>&1; then
 else
     echo "⚠️ ADVERTENCIA: 'mtools' no está instalado. No se pudo parchear el booteo UEFI."
 fi
-# 2. Construcción con Xorriso Híbrido Robusto (v0.99rc24)
+# 2. Construcción con Xorriso
 echo "   Ejecutando Xorriso con parámetros de booteo de la ISO original..."
 xorriso -as mkisofs -r -J -joliet-long \
   -isohybrid-mbr "$ISO_HOME/boot/isolinux/isohdpfx.bin" \

@@ -4,12 +4,7 @@ set -euo pipefail
 
 echo "💿 [Módulo 02] Extrayendo ISO original..."
 
-# Cargar configuración if not loaded
-# Carga de configuración corregida
-if [ -z "$ISO_ORIGINAL" ]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    source "$SCRIPT_DIR/../config.env"
-fi
+source "$(dirname "$0")/_common.sh"
 
 # Limpiar trabajo anterior
 echo "   Limpiando $WORKDIR..."
@@ -25,8 +20,8 @@ if [ $? -ne 0 ] || [ ! -d "$ISO_HOME/boot" ]; then
     exit 1
 fi
 
-# EXTRAER ARCHIVOS DE BOOTEO CRÍTICOS (v0.99rc24)
-echo "   Extrayendo metatados de booteo (isohdpfx.bin y efi.img)..."
+# Extraer archivos de booteo críticos
+echo "   Extrayendo metadatos de booteo (isohdpfx.bin y efi.img)..."
 mkdir -p "$ISO_HOME/boot/grub" 2>/dev/null
 
 # Extraer el MBR (isohdpfx.bin) de los primeros 432 bytes

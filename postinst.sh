@@ -1,1 +1,0 @@
-scripts_aux/postinst_final.sh
