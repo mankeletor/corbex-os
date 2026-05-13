@@ -304,25 +304,15 @@ done
 log "Directorio inicial del terminal configurado para ambos usuarios ✅"
 
 # ─────────────────────────────────────────────
-# 12. Instalar PSeInt offline desde ISO
+# 12. PSeInt (instalado vía d-i pkgsel desde el repo local)
 # ─────────────────────────────────────────────
-log "Instalando PSeInt offline..."
-if [ -s /root/extras/pseint.tgz ]; then
-    tar xf /root/extras/pseint.tgz -C /opt/
-    if [ -d /opt/pseint ]; then
-        strip --strip-unneeded /opt/pseint/wxPSeInt /opt/pseint/pseint 2>/dev/null || true
-        cat > /usr/share/applications/pseint.desktop << DESKTOP
-[Desktop Entry]
-Name=PSeInt
-Exec=/opt/pseint/wxPSeInt
-Icon=/opt/pseint/imgs/icon64.png
-Type=Application
-Categories=Development;Education;
-DESKTOP
-        log "PSeInt instalado ✅"
-    fi
+log "Verificando PSeInt..."
+if dpkg -l pseint 2>/dev/null | grep -q "^ii"; then
+    log "PSeInt instalado vía apt ✅"
+elif apt-get install -y pseint < /dev/null 2>/dev/null; then
+    log "PSeInt instalado ✅"
 else
-    log "⚠️ /root/extras/pseint.tgz no encontrado"
+    log "⚠️ PSeInt no disponible en el repositorio local"
 fi
 # ─────────────────────────────────────────────
 # 12b. Instalar Avidemux desde AppImage

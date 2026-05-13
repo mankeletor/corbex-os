@@ -304,7 +304,72 @@ else
     echo "   ✅ Todos los paquetes críticos verificados."
 fi
 
-# 4. Generar Índices Apt
+# 4. PSeInt: empaquetar como .deb para gestión nativa con apt
+PSEINT_VER="20250314"
+PSEINT_DEB="$ISO_HOME/pool/local/pseint_${PSEINT_VER}_amd64.deb"
+if [ ! -f "$PSEINT_DEB" ]; then
+    PSEINT_TGZ="$BASE_DIR/pkg_cache/pseint-${PSEINT_VER}.tgz"
+    if [ ! -s "$PSEINT_TGZ" ]; then
+        echo "   Descargando PSeInt ${PSEINT_VER}..."
+        wget --tries=3 --timeout=60 \
+            -O "$PSEINT_TGZ" \
+            "https://downloads.sourceforge.net/project/pseint/${PSEINT_VER}/pseint-l64-${PSEINT_VER}.tgz" || {
+            echo "⚠️ No se pudo descargar PSeInt" >> "$WARN_LOG"
+            rm -f "$PSEINT_TGZ"
+        }
+    fi
+
+    if [ -s "$PSEINT_TGZ" ]; then
+        echo "   Empaquetando PSeInt como .deb..."
+        PSEINT_DIR="$WORKDIR/pseint-deb"
+        rm -rf "$PSEINT_DIR"
+        mkdir -p "$PSEINT_DIR/DEBIAN"
+        mkdir -p "$PSEINT_DIR/opt/pseint"
+        mkdir -p "$PSEINT_DIR/usr/share/applications"
+        mkdir -p "$PSEINT_DIR/usr/share/doc/pseint"
+
+        tar xzf "$PSEINT_TGZ" -C "$PSEINT_DIR/opt/pseint" --strip-components=1 2>/dev/null
+
+        strip --strip-unneeded "$PSEINT_DIR/opt/pseint/wxPSeInt" \
+            "$PSEINT_DIR/opt/pseint/pseint" 2>/dev/null || true
+
+        cat > "$PSEINT_DIR/DEBIAN/control" << CTRL
+Package: pseint
+Version: ${PSEINT_VER}
+Section: education
+Priority: optional
+Architecture: amd64
+Maintainer: CorbexOS <psaquilan82@gmail.com>
+Description: PSeInt - intérprete de pseudocódigo para aprender programación
+ PSeInt es una herramienta educativa para aprender fundamentos de
+ programación usando pseudocódigo en español.
+CTRL
+
+        cat > "$PSEINT_DIR/usr/share/applications/pseint.desktop" << DTOP
+[Desktop Entry]
+Name=PSeInt
+Comment=Intérprete de pseudocódigo
+Exec=/opt/pseint/wxPSeInt
+Icon=/opt/pseint/imgs/icon64.png
+Type=Application
+Categories=Development;Education;
+DTOP
+
+        dpkg-deb --build "$PSEINT_DIR" "$PSEINT_DEB" >/dev/null 2>>"$WARN_LOG" || {
+            echo "⚠️ Falló al crear .deb de PSeInt" >> "$WARN_LOG"
+            rm -f "$PSEINT_DEB"
+        }
+
+        if [ -f "$PSEINT_DEB" ]; then
+            echo "pseint" >> "$BASE_DIR/pkgs_install.txt"
+            echo "pseint" >> "$ISO_HOME/pkgs_install.txt"
+            echo "   ✅ PSeInt ${PSEINT_VER} empaquetado como .deb"
+        fi
+        rm -rf "$PSEINT_DIR"
+    fi
+fi
+
+# 5. Generar Índices Apt
 echo "   Generando índices de repositorio local..."
 cd "$ISO_HOME"
 dpkg-scanpackages -m pool/local /dev/null | gzip -9c > dists/excalibur/local/binary-amd64/Packages.gz
@@ -333,27 +398,11 @@ done)
 EOF
 
 # ─────────────────────────────────────────────
-# Extras offline (PSeInt, Antigravity, Avidemux, Chrome)
+# Extras offline (Antigravity, Avidemux, Chrome)
 # Se descargan en build time y se instalan vía postinst
 # ─────────────────────────────────────────────
 EXTRAS_DIR="$ISO_HOME/extras"
 mkdir -p "$EXTRAS_DIR/antigravity"
-
-# --- PSeInt ---
-PSEINT_VER="20250314"
-PSEINT_FILE="$EXTRAS_DIR/pseint.tgz"
-if [ ! -s "$PSEINT_FILE" ]; then
-    echo "   Descargando PSeInt ${PSEINT_VER}..."
-    wget --tries=3 --timeout=60 \
-        -O "$PSEINT_FILE" \
-        "https://downloads.sourceforge.net/project/pseint/${PSEINT_VER}/pseint-l64-${PSEINT_VER}.tgz" || {
-        echo "⚠️ No se pudo descargar PSeInt" >> "$WARN_LOG"
-        rm -f "$PSEINT_FILE"
-    }
-    [ -s "$PSEINT_FILE" ] && echo "   ✅ PSeInt descargado ($(du -sh "$PSEINT_FILE" | cut -f1))"
-else
-    echo "   PSeInt ya en cache, reutilizando ✅"
-fi
 
 # --- Antigravity GPG key ---
 GPG_FILE="$EXTRAS_DIR/antigravity/antigravity-repo-key.gpg"
@@ -427,7 +476,7 @@ fi
 
 echo "✅ Extras offline listos en $EXTRAS_DIR"
 
-# 5. Generar archivo de versión
+# 6. Generar archivo de versión
 echo "   Generando archivos de versión en el root de la ISO..."
 BUILD_VERSION="CorbexOS ${ISO_PREFIX} Build $(date '+%Y-%m-%d %H:%M')"
 echo "$BUILD_VERSION" > "$ISO_HOME/corbex-version"
