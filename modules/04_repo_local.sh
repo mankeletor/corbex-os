@@ -215,18 +215,30 @@ else
     touch "$BASE_PKGS_FILE"
 fi
 
-# 2. Extraer e Indexar Pool1
+# 2. Pool1: extraer solo si no está todo en caché
 EXTRACT_DIR="$WORKDIR/pool1_files"
 POOL1_INDEX="$WORKDIR/pool1_index.txt"
-echo "   Extrayendo Pool1.iso..."
-rm -rf "$EXTRACT_DIR" 2>/dev/null
-mkdir -p "$EXTRACT_DIR"
-xorriso -osirrox on -indev "$POOL1_ISO" -extract /pool "$EXTRACT_DIR" 2>/dev/null || { echo "❌ Error: Falló la extracción de $POOL1_ISO"; exit 1; }
 
-# Crear índice de búsqueda rápida
-find "$EXTRACT_DIR" -name "*.deb" -printf "%p\n" > "$POOL1_INDEX"
-DEB_COUNT=$(wc -l < "$POOL1_INDEX")
-echo "   ✅ Pool1 indexado ($DEB_COUNT paquetes)."
+POOL1_NEEDED=false
+for pkg in "${PAQUETES[@]}"; do
+    if ! find "$PKG_CACHE" -maxdepth 1 -name "${pkg}_*.deb" -print -quit 2>/dev/null | grep -q .; then
+        POOL1_NEEDED=true
+        break
+    fi
+done
+
+if [ "$POOL1_NEEDED" = true ]; then
+    echo "   Extrayendo Pool1.iso (faltan paquetes en caché)..."
+    rm -rf "$EXTRACT_DIR" 2>/dev/null
+    mkdir -p "$EXTRACT_DIR"
+    xorriso -osirrox on -indev "$POOL1_ISO" -extract /pool "$EXTRACT_DIR" 2>/dev/null || { echo "❌ Error: Falló la extracción de $POOL1_ISO"; exit 1; }
+    find "$EXTRACT_DIR" -name "*.deb" -printf "%p\n" > "$POOL1_INDEX"
+    DEB_COUNT=$(wc -l < "$POOL1_INDEX")
+    echo "   ✅ Pool1 indexado ($DEB_COUNT paquetes)."
+else
+    echo "   ✅ Caché completo, omitiendo Pool1."
+    touch "$POOL1_INDEX"
+fi
 
 # 3. Procesamiento Paralelo Optimizado
 export EXTRACT_DIR ISO_HOME BASE_PKGS_FILE POOL1_INDEX WARN_LOG APT_SANDBOX PKG_CACHE
