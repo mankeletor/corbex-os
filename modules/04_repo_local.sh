@@ -163,6 +163,7 @@ PAQUETES_CRITICOS=(
     grub-efi-amd64-bin
     efibootmgr
     rdate
+    libwoff1
 )
 PAQUETES_SEMILLA+=("${PAQUETES_CRITICOS[@]}")
 
@@ -249,7 +250,8 @@ process_pkg() {
     
     # 1. ¿Está en base? (Inmutabilidad estricta)
     # EXCEPCIÓN: Forzamos la inclusión de los cargadores de arranque para asegurar el modo Dual
-    if [[ "$pkg" != "grub-pc" && "$pkg" != "grub-efi-amd64" ]]; then
+    # También forzamos sus dependencias comunes para evitar desincronización de versiones (ej: grub-common deb13u1 vs u2)
+    if [[ "$pkg" != "grub-pc" && "$pkg" != "grub-efi-amd64" && "$pkg" != "grub-common" && "$pkg" != "grub2-common" && "$pkg" != "grub-pc-bin" && "$pkg" != "grub-efi-amd64-bin" ]]; then
         if grep -q "^${pkg}$" "$BASE_PKGS_FILE"; then return 0; fi
     fi
 
