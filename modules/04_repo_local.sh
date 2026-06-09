@@ -255,25 +255,31 @@ process_pkg() {
         if grep -q "^${pkg}$" "$BASE_PKGS_FILE"; then return 0; fi
     fi
 
-    # 2. Buscar en índice de Pool1
-    local DEB_PATH
-    DEB_PATH=$(grep -m1 "/${pkg}_" "$POOL1_INDEX" || true)
+    # 2. Buscar en índice de Pool1 (Omitimos GRUB para forzar versiones de red sincronizadas)
+    local DEB_PATH=""
+    if [[ ! "$pkg" =~ ^grub ]]; then
+        DEB_PATH=$(grep -m1 "/${pkg}_" "$POOL1_INDEX" || true)
+    fi
     
     if [ -n "$DEB_PATH" ] && [ -f "$DEB_PATH" ]; then
         cp "$DEB_PATH" "$ISO_HOME/pool/local/" || echo "❌ Error copiando $pkg desde Pool1" >> "$WARN_LOG"
     else
-        # 3. Buscar en Cache persistente
-        local CACHED_DEB
-        CACHED_DEB=$(find "$PKG_CACHE" -maxdepth 1 -name "${pkg}_*.deb" -print -quit 2>/dev/null || true)
+        # 3. Buscar en Cache persistente (Omitimos GRUB para asegurar sincronía)
+        local CACHED_DEB=""
+        if [[ ! "$pkg" =~ ^grub ]]; then
+            CACHED_DEB=$(find "$PKG_CACHE" -maxdepth 1 -name "${pkg}_*.deb" -print -quit 2>/dev/null || true)
+        fi
+        
         if [ -n "$CACHED_DEB" ] && [ -f "$CACHED_DEB" ]; then
             cp "$CACHED_DEB" "$ISO_HOME/pool/local/" || echo "❌ Error copiando $pkg desde Cache" >> "$WARN_LOG"
         else
             # 4. Descarga con Sandbox APT y Re-intento
+            if [[ "$pkg" =~ ^grub ]]; then rm -f "$PKG_CACHE"/${pkg}_*.deb; fi
             while [ "$count" -le "$retries" ]; do
                 # Descargar a cache primero con flags de ultra-compatibilidad
                 if (cd "$PKG_CACHE" && apt-get -c "$APT_SANDBOX/apt.conf" download "$pkg" -o APT::Get::AllowUnauthenticated=true -o Acquire::AllowInsecureRepositories=true -qq 2>/dev/null); then
                     local NEW_DEB
-                    NEW_DEB=$(find "$PKG_CACHE" -maxdepth 1 -name "${pkg}_*.deb" -print -quit 2>/dev/null || true)
+                    NEW_DEB=$(ls -1t "$PKG_CACHE"/${pkg}_*.deb 2>/dev/null | head -n1 || true)
                     if [ -n "$NEW_DEB" ]; then
                         cp "$NEW_DEB" "$ISO_HOME/pool/local/"
                         return 0
