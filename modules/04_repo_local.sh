@@ -170,10 +170,10 @@ PAQUETES_SEMILLA+=("${PAQUETES_CRITICOS[@]}")
 # 🔥 GRUB-DUAL: Asegurar que ambos GRUBs meta-paquetes estén para la descarga
 # pero NO los incluimos en PAQUETES_SEMILLA para no romper la simulación de APT
 # ya que grub-pc y grub-efi-amd64 suelen entrar en conflicto.
-PAQUETES_ADICIONALES_REPOS=(grub-pc grub-efi-amd64)
+PAQUETES_ADICIONALES_REPOS=(grub-pc grub-efi-amd64 grub-efi-amd64-signed grub-efi-amd64-unsigned)
 
 # Exportar la lista base (se actualizará tras la resolución)
-printf "%s\n" "${PAQUETES_SEMILLA[@]}" | grep -vE "^(grub-pc|grub-efi-amd64)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
+printf "%s\n" "${PAQUETES_SEMILLA[@]}" | grep -vE "^(grub-pc|grub-efi-amd64|grub-efi-amd64-signed|grub-efi-amd64-unsigned)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
 
 # 0.1 Resolución de Dependencias Recursivas (Cerebro v0.99rc27)
 echo "   Resolviendo dependencias recursivas mediante simulación APT..."
@@ -195,7 +195,7 @@ else
     # 0.1b REFINAMIENTO DE pkgs_install.txt: Usar la lista resuelta para el instalador
     # Esto asegura que d-i pkgsel sepa exactamente qué instalar offline.
     echo "   Refinando pkgs_install.txt con resolución de dependencias completa..."
-    printf "%s\n" "$PAQUETES_LISTA_COMPLETA" | grep -vE "^(grub-pc|grub-efi-amd64)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
+    printf "%s\n" "$PAQUETES_LISTA_COMPLETA" | grep -vE "^(grub-pc|grub-efi-amd64|grub-efi-amd64-signed|grub-efi-amd64-unsigned)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
 fi
 
 # 0.2 Generación de pkgs_offline.txt (Refactorizado)
@@ -249,32 +249,23 @@ process_pkg() {
     local count=0
     
     # 1. ¿Está en base? (Inmutabilidad estricta)
-    # EXCEPCIÓN: Forzamos la inclusión de los cargadores de arranque para asegurar el modo Dual
-    # También forzamos sus dependencias comunes para evitar desincronización de versiones (ej: grub-common deb13u1 vs u2)
-    if [[ "$pkg" != "grub-pc" && "$pkg" != "grub-efi-amd64" && "$pkg" != "grub-common" && "$pkg" != "grub2-common" && "$pkg" != "grub-pc-bin" && "$pkg" != "grub-efi-amd64-bin" ]]; then
-        if grep -q "^${pkg}$" "$BASE_PKGS_FILE"; then return 0; fi
-    fi
+    if grep -q "^${pkg}$" "$BASE_PKGS_FILE"; then return 0; fi
 
-    # 2. Buscar en índice de Pool1 (Omitimos GRUB para forzar versiones de red sincronizadas)
+    # 2. Buscar en índice de Pool1
     local DEB_PATH=""
-    if [[ ! "$pkg" =~ ^grub ]]; then
-        DEB_PATH=$(grep -m1 "/${pkg}_" "$POOL1_INDEX" || true)
-    fi
+    DEB_PATH=$(grep -m1 "/${pkg}_" "$POOL1_INDEX" || true)
     
     if [ -n "$DEB_PATH" ] && [ -f "$DEB_PATH" ]; then
         cp "$DEB_PATH" "$ISO_HOME/pool/local/" || echo "❌ Error copiando $pkg desde Pool1" >> "$WARN_LOG"
     else
-        # 3. Buscar en Cache persistente (Omitimos GRUB para asegurar sincronía)
+        # 3. Buscar en Cache persistente
         local CACHED_DEB=""
-        if [[ ! "$pkg" =~ ^grub ]]; then
-            CACHED_DEB=$(find "$PKG_CACHE" -maxdepth 1 -name "${pkg}_*.deb" -print -quit 2>/dev/null || true)
-        fi
+        CACHED_DEB=$(find "$PKG_CACHE" -maxdepth 1 -name "${pkg}_*.deb" -print -quit 2>/dev/null || true)
         
         if [ -n "$CACHED_DEB" ] && [ -f "$CACHED_DEB" ]; then
             cp "$CACHED_DEB" "$ISO_HOME/pool/local/" || echo "❌ Error copiando $pkg desde Cache" >> "$WARN_LOG"
         else
             # 4. Descarga con Sandbox APT y Re-intento
-            if [[ "$pkg" =~ ^grub ]]; then rm -f "$PKG_CACHE"/${pkg}_*.deb; fi
             while [ "$count" -le "$retries" ]; do
                 # Descargar a cache primero con flags de ultra-compatibilidad
                 if (cd "$PKG_CACHE" && apt-get -c "$APT_SANDBOX/apt.conf" download "$pkg" -o APT::Get::AllowUnauthenticated=true -o Acquire::AllowInsecureRepositories=true -qq 2>/dev/null); then
@@ -315,6 +306,7 @@ fi
 # 4. Generar Índices Apt
 echo "   Generando índices de repositorio local..."
 cd "$ISO_HOME"
+
 dpkg-scanpackages -m pool/local /dev/null | gzip -9c > dists/excalibur/local/binary-amd64/Packages.gz
 zcat dists/excalibur/local/binary-amd64/Packages.gz > dists/excalibur/local/binary-amd64/Packages
 
@@ -379,18 +371,14 @@ fi
 if [ -s "$GPG_FILE" ] && ! ls "$EXTRAS_DIR/antigravity/antigravity_"*.deb 1>/dev/null 2>&1; then
     echo "   Descargando .deb de Antigravity..."
     echo "deb [signed-by=$GPG_FILE] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" \
-        > "$TMP_DIR/antigravity-build.list"
+        > "$APT_SANDBOX/etc/apt/sources.list.d/antigravity.list"
     apt-get -c "$APT_SANDBOX/apt.conf" update \
-        -o Dir::Etc::sourcelist="$TMP_DIR/antigravity-build.list" \
-        -o Dir::Etc::sourceparts="-" \
         -o APT::Get::List-Cleanup=0 -qq 2>/dev/null || true
     (cd "$EXTRAS_DIR/antigravity" && \
         apt-get -c "$APT_SANDBOX/apt.conf" download antigravity \
-        -o Dir::Etc::sourcelist="$TMP_DIR/antigravity-build.list" \
-        -o Dir::Etc::sourceparts="-" \
         -o APT::Get::AllowUnauthenticated=true -qq 2>/dev/null) || \
         echo "⚠️ No se pudo descargar .deb de Antigravity" >> "$WARN_LOG"
-    rm -f "$TMP_DIR/antigravity-build.list"
+    rm -f "$APT_SANDBOX/etc/apt/sources.list.d/antigravity.list"
 fi
 
 

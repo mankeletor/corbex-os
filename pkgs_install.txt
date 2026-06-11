@@ -266,8 +266,6 @@ groff-base
 grub2-common
 grub-common
 grub-efi-amd64-bin
-grub-efi-amd64-signed
-grub-efi-amd64-unsigned
 grub-pc-bin
 gsettings-desktop-schemas
 gstreamer1.0-clutter-3.0
