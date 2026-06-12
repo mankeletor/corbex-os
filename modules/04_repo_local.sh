@@ -383,8 +383,9 @@ cp -r opt /
 cp -r usr /
 EOF
         chmod +x install_pseint.sh
+        echo "PSeInt IDE" > description-pak
         echo "Construyendo paquete debian de PSeInt..."
-        checkinstall -D --install=no -y --nodoc --pkgname="pseint" --pkgversion="$PSEINT_VER" --pkgarch="amd64" --pkglicense="GPL" --maintainer="corbex" ./install_pseint.sh > /dev/null 2>&1
+        checkinstall -D --install=no -y --default --nodoc --pkgname="pseint" --pkgversion="$PSEINT_VER" --pkgarch="amd64" --pkglicense="GPL" --maintainer="corbex@localhost" ./install_pseint.sh || true
         
         mv pseint_*.deb "$ISO_HOME/pool/local/" || mv *.deb "$ISO_HOME/pool/local/" 2>/dev/null || echo "⚠️ checkinstall falló o no generó el deb." >> "$WARN_LOG"
         cd - > /dev/null
