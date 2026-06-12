@@ -164,6 +164,7 @@ PAQUETES_CRITICOS=(
     efibootmgr
     rdate
     libwoff1
+    pseint
 )
 PAQUETES_SEMILLA+=("${PAQUETES_CRITICOS[@]}")
 
@@ -343,43 +344,60 @@ mkdir -p "$EXTRAS_DIR/antigravity"
 # --- PSeInt ---
 PSEINT_VER="20250314"
 PSEINT_FILE="$EXTRAS_DIR/pseint.tgz"
-if [ ! -s "$PSEINT_FILE" ]; then
-    echo "   Descargando PSeInt ${PSEINT_VER}..."
-    wget --tries=3 --timeout=60 \
-        -O "$PSEINT_FILE" \
-        "https://downloads.sourceforge.net/project/pseint/${PSEINT_VER}/pseint-l64-${PSEINT_VER}.tgz" || {
-        echo "⚠️ No se pudo descargar PSeInt" >> "$WARN_LOG"
-        rm -f "$PSEINT_FILE"
-    }
-    [ -s "$PSEINT_FILE" ] && echo "   ✅ PSeInt descargado ($(du -sh "$PSEINT_FILE" | cut -f1))"
+PSEINT_DEB="$ISO_HOME/pool/local/pseint_${PSEINT_VER}-1_amd64.deb"
+
+if [ ! -s "$PSEINT_DEB" ] && [ ! -s "$ISO_HOME/pool/local/pseint_${PSEINT_VER}-1_amd64.deb" ]; then
+    echo "   Construyendo paquete PSeInt ${PSEINT_VER}..."
+    if [ ! -s "$PSEINT_FILE" ]; then
+        wget --tries=3 --timeout=60 \
+            -O "$PSEINT_FILE" \
+            "https://downloads.sourceforge.net/project/pseint/${PSEINT_VER}/pseint-l64-${PSEINT_VER}.tgz" || {
+            echo "⚠️ No se pudo descargar PSeInt" >> "$WARN_LOG"
+            rm -f "$PSEINT_FILE"
+        }
+    fi
+
+    if [ -s "$PSEINT_FILE" ]; then
+        PSEINT_BUILD="$EXTRAS_DIR/pseint_build"
+        rm -rf "$PSEINT_BUILD"
+        mkdir -p "$PSEINT_BUILD/opt"
+        mkdir -p "$PSEINT_BUILD/usr/share/applications"
+
+        tar xf "$PSEINT_FILE" -C "$PSEINT_BUILD/opt/"
+        strip --strip-unneeded "$PSEINT_BUILD/opt/pseint/wxPSeInt" "$PSEINT_BUILD/opt/pseint/pseint" 2>/dev/null || true
+
+        cat > "$PSEINT_BUILD/usr/share/applications/pseint.desktop" << DESKTOP
+[Desktop Entry]
+Name=PSeInt
+Exec=/opt/pseint/wxPSeInt
+Icon=/opt/pseint/imgs/icon64.png
+Type=Application
+Categories=Development;Education;
+DESKTOP
+
+        # Build deb with checkinstall
+        cd "$PSEINT_BUILD"
+        cat > install_pseint.sh << 'EOF'
+#!/bin/bash
+cp -r opt /
+cp -r usr /
+EOF
+        chmod +x install_pseint.sh
+        echo "Construyendo paquete debian de PSeInt..."
+        checkinstall -D --install=no -y --nodoc --pkgname="pseint" --pkgversion="$PSEINT_VER" --pkgarch="amd64" --pkglicense="GPL" --maintainer="corbex" ./install_pseint.sh > /dev/null 2>&1
+        
+        mv pseint_*.deb "$ISO_HOME/pool/local/" || mv *.deb "$ISO_HOME/pool/local/" 2>/dev/null || echo "⚠️ checkinstall falló o no generó el deb." >> "$WARN_LOG"
+        cd - > /dev/null
+        rm -rf "$PSEINT_BUILD"
+        echo "   ✅ Paquete PSeInt construido y movido a pool/local"
+    fi
 else
-    echo "   PSeInt ya en cache, reutilizando ✅"
+    echo "   PSeInt ya empaquetado en pool/local, reutilizando ✅"
 fi
 
-# --- Antigravity GPG key ---
-GPG_FILE="$EXTRAS_DIR/antigravity/antigravity-repo-key.gpg"
-if [ ! -s "$GPG_FILE" ]; then
-    echo "   Descargando clave GPG de Antigravity..."
-    curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg \
-        -o "$GPG_FILE" || {
-        echo "⚠️ No se pudo descargar clave GPG de Antigravity" >> "$WARN_LOG"
-        rm -f "$GPG_FILE"
-    }
-fi
-
-# --- Antigravity .deb ---
-if [ -s "$GPG_FILE" ] && ! ls "$EXTRAS_DIR/antigravity/antigravity_"*.deb 1>/dev/null 2>&1; then
-    echo "   Descargando .deb de Antigravity..."
-    echo "deb [signed-by=$GPG_FILE] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" \
-        > "$APT_SANDBOX/etc/apt/sources.list.d/antigravity.list"
-    apt-get -c "$APT_SANDBOX/apt.conf" update \
-        -o APT::Get::List-Cleanup=0 -qq 2>/dev/null || true
-    (cd "$EXTRAS_DIR/antigravity" && \
-        apt-get -c "$APT_SANDBOX/apt.conf" download antigravity \
-        -o APT::Get::AllowUnauthenticated=true -qq 2>/dev/null) || \
-        echo "⚠️ No se pudo descargar .deb de Antigravity" >> "$WARN_LOG"
-    rm -f "$APT_SANDBOX/etc/apt/sources.list.d/antigravity.list"
-fi
+# --- Antigravity ---
+# Google ha quitado/bloqueado los comandos para descargar mediante apt-get/curl.
+# El usuario debe proveer manualmente 'antigravity_*.deb' en la carpeta extras/antigravity/.
 
 
 # --- Avidemux AppImage (self-contained, no Flatpak runtime needed) ---

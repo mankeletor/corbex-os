@@ -14,7 +14,7 @@ if [ -z "${ISO_ORIGINAL:-}" ]; then
 fi
 
 # 1. Verificar comandos necesarios
-for cmd in cpio gzip xorriso curl rsync wget awk sed dpkg-scanpackages apt-ftparchive mcopy mdel rdate; do
+for cmd in cpio gzip xorriso curl rsync wget awk sed dpkg-scanpackages apt-ftparchive mcopy mdel rdate checkinstall; do
     if ! command -v $cmd &> /dev/null; then
         echo "❌ Error: $cmd no está instalado."
         if [ "$cmd" = "dpkg-scanpackages" ]; then
