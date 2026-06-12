@@ -386,7 +386,6 @@ CTRL
             echo "❌ ERROR: dpkg-deb no generó el .deb de PSeInt" | tee -a "$WARN_LOG"
         fi
 
-        cd - > /dev/null
         rm -rf "$PSEINT_BUILD"
     fi
 else
@@ -442,6 +441,7 @@ echo "✅ Extras offline listos en $EXTRAS_DIR"
 
 # 4. Generar Índices Apt
 echo "   Generando índices de repositorio local..."
+PREV_DIR="$(pwd)"
 cd "$ISO_HOME"
 
 dpkg-scanpackages -m pool/local /dev/null | gzip -9c > dists/excalibur/local/binary-amd64/Packages.gz
@@ -469,7 +469,7 @@ $(find "dists/excalibur/local/binary-amd64" -type f \( -name "Packages*" -o -nam
 done)
 EOF
 
-cd - > /dev/null
+cd "$PREV_DIR"
 
 # 5. Generar archivo de versión
 echo "   Generando archivos de versión en el root de la ISO..."
