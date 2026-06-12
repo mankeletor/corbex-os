@@ -164,7 +164,6 @@ PAQUETES_CRITICOS=(
     efibootmgr
     rdate
     libwoff1
-    pseint
 )
 PAQUETES_SEMILLA+=("${PAQUETES_CRITICOS[@]}")
 
@@ -198,6 +197,9 @@ else
     echo "   Refinando pkgs_install.txt con resolución de dependencias completa..."
     printf "%s\n" "$PAQUETES_LISTA_COMPLETA" | grep -vE "^(grub-pc|grub-efi-amd64|grub-efi-amd64-signed|grub-efi-amd64-unsigned)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
 fi
+
+# Añadir paquetes personalizados construidos en el script
+echo "pseint" >> "$BASE_DIR/pkgs_install.txt"
 
 # 0.2 Generación de pkgs_offline.txt (Refactorizado)
 echo "   Generando pkgs_offline.txt consolidado..."
@@ -304,34 +306,6 @@ else
     echo "   ✅ Todos los paquetes críticos verificados."
 fi
 
-# 4. Generar Índices Apt
-echo "   Generando índices de repositorio local..."
-cd "$ISO_HOME"
-
-dpkg-scanpackages -m pool/local /dev/null | gzip -9c > dists/excalibur/local/binary-amd64/Packages.gz
-zcat dists/excalibur/local/binary-amd64/Packages.gz > dists/excalibur/local/binary-amd64/Packages
-
-# Generar archivo Release con checksums MD5
-echo "   Generando Release con checksums MD5..."
-cat > "dists/excalibur/local/binary-amd64/Release" << EOF
-Origin: Devuan CorbexOS
-Label: CorbexOS Local Repo
-Suite: excalibur
-Codename: excalibur
-Date: $(date -Ru)
-Architectures: amd64
-Components: local
-Description: Paquetes Complementarios CorbexOS
-
-MD5Sum:
-$(find "dists/excalibur/local/binary-amd64" -type f \( -name "Packages*" -o -name "Release" \) -printf "%P\n" | grep -v "^Release$" | while read -r f; do
-    printf " %s %16d %s\n" "$(md5sum "dists/excalibur/local/binary-amd64/$f" | cut -d' ' -f1)" "$(stat -c%s "dists/excalibur/local/binary-amd64/$f")" "$f"
-done)
-SHA256:
-$(find "dists/excalibur/local/binary-amd64" -type f \( -name "Packages*" -o -name "Release" \) -printf "%P\n" | grep -v "^Release$" | while read -r f; do
-    printf " %s %16d %s\n" "$(sha256sum "dists/excalibur/local/binary-amd64/$f" | cut -d' ' -f1)" "$(stat -c%s "dists/excalibur/local/binary-amd64/$f")" "$f"
-done)
-EOF
 
 # ─────────────────────────────────────────────
 # EXTRAS OFFLINE: PSeInt + Antigravity + Avidemux + Google Chrome
@@ -375,22 +349,45 @@ Type=Application
 Categories=Development;Education;
 DESKTOP
 
-        # Build deb with checkinstall
-        cd "$PSEINT_BUILD"
-        cat > install_pseint.sh << 'EOF'
-#!/bin/bash
-cp -r opt /
-cp -r usr /
-EOF
-        chmod +x install_pseint.sh
-        echo "PSeInt IDE" > description-pak
-        echo "Construyendo paquete debian de PSeInt..."
-        checkinstall -D --install=no -y --default --nodoc --pkgname="pseint" --pkgversion="$PSEINT_VER" --pkgarch="amd64" --pkglicense="GPL" --maintainer="corbex@localhost" ./install_pseint.sh || true
-        
-        mv pseint_*.deb "$ISO_HOME/pool/local/" || mv *.deb "$ISO_HOME/pool/local/" 2>/dev/null || echo "⚠️ checkinstall falló o no generó el deb." >> "$WARN_LOG"
+        # Build deb with dpkg-deb (fully non-interactive, no TTY needed)
+        PSEINT_PKG="$PSEINT_BUILD/pkg"
+        mkdir -p "$PSEINT_PKG/opt"
+        mkdir -p "$PSEINT_PKG/usr/share/applications"
+        mkdir -p "$PSEINT_PKG/DEBIAN"
+
+        # Copy files into package staging area
+        cp -r "$PSEINT_BUILD/opt/pseint" "$PSEINT_PKG/opt/"
+        cp "$PSEINT_BUILD/usr/share/applications/pseint.desktop" "$PSEINT_PKG/usr/share/applications/"
+
+        # Calculate installed size in KB
+        INST_SIZE=$(du -sk "$PSEINT_PKG/opt" | cut -f1)
+
+        # Write DEBIAN/control (required by dpkg-deb)
+        cat > "$PSEINT_PKG/DEBIAN/control" << CTRL
+Package: pseint
+Version: ${PSEINT_VER}-1
+Architecture: amd64
+Maintainer: CorbexOS <corbex@localhost>
+Installed-Size: ${INST_SIZE}
+Section: education
+Priority: optional
+Description: PSeInt IDE - Pseudocode interpreter for education
+ PSeInt is a tool for students learning algorithmic programming
+ through pseudocode and flowcharts.
+CTRL
+
+        echo "Construyendo paquete debian de PSeInt con dpkg-deb..."
+        DEB_OUT="$ISO_HOME/pool/local/pseint_${PSEINT_VER}-1_amd64.deb"
+        dpkg-deb --build "$PSEINT_PKG" "$DEB_OUT"
+
+        if [ -s "$DEB_OUT" ]; then
+            echo "   ✅ Paquete PSeInt construido: $(du -sh "$DEB_OUT" | cut -f1)"
+        else
+            echo "❌ ERROR: dpkg-deb no generó el .deb de PSeInt" | tee -a "$WARN_LOG"
+        fi
+
         cd - > /dev/null
         rm -rf "$PSEINT_BUILD"
-        echo "   ✅ Paquete PSeInt construido y movido a pool/local"
     fi
 else
     echo "   PSeInt ya empaquetado en pool/local, reutilizando ✅"
@@ -442,6 +439,37 @@ else
 fi
 
 echo "✅ Extras offline listos en $EXTRAS_DIR"
+
+# 4. Generar Índices Apt
+echo "   Generando índices de repositorio local..."
+cd "$ISO_HOME"
+
+dpkg-scanpackages -m pool/local /dev/null | gzip -9c > dists/excalibur/local/binary-amd64/Packages.gz
+zcat dists/excalibur/local/binary-amd64/Packages.gz > dists/excalibur/local/binary-amd64/Packages
+
+# Generar archivo Release con checksums MD5
+echo "   Generando Release con checksums MD5..."
+cat > "dists/excalibur/local/binary-amd64/Release" << EOF
+Origin: Devuan CorbexOS
+Label: CorbexOS Local Repo
+Suite: excalibur
+Codename: excalibur
+Date: $(date -Ru)
+Architectures: amd64
+Components: local
+Description: Paquetes Complementarios CorbexOS
+
+MD5Sum:
+$(find "dists/excalibur/local/binary-amd64" -type f \( -name "Packages*" -o -name "Release" \) -printf "%P\n" | grep -v "^Release$" | while read -r f; do
+    printf " %s %16d %s\n" "$(md5sum "dists/excalibur/local/binary-amd64/$f" | cut -d' ' -f1)" "$(stat -c%s "dists/excalibur/local/binary-amd64/$f")" "$f"
+done)
+SHA256:
+$(find "dists/excalibur/local/binary-amd64" -type f \( -name "Packages*" -o -name "Release" \) -printf "%P\n" | grep -v "^Release$" | while read -r f; do
+    printf " %s %16d %s\n" "$(sha256sum "dists/excalibur/local/binary-amd64/$f" | cut -d' ' -f1)" "$(stat -c%s "dists/excalibur/local/binary-amd64/$f")" "$f"
+done)
+EOF
+
+cd - > /dev/null
 
 # 5. Generar archivo de versión
 echo "   Generando archivos de versión en el root de la ISO..."
