@@ -138,9 +138,19 @@ El proceso de forjado toma entre 15 y 40 minutos dependiendo de tu ancho de band
 
 Si venís corto de tiempo o querés hacer deploy ya en el aula:
 
-> 🚀 **[devuan-corbexos-20260608_1516.iso (MEGA)](https://mega.nz/file/SQEU1IYI#l8PnY7Jumm89ayfV-nHnzrZJYG4quzi10zOxfyWnygE)**
+> 🚀 **[devuan-corbexos-20260615_2149.iso (MEGA) - ÚLTIMA VERSIÓN](https://mega.nz/file/PJc0EYpR#oMtzinjlfUEXPf5w3K-AxQsEn0jJxQQOdxIyIyS5Lac)**
 >
-> 📄 **[devuan-corbexos-20260608_1516.iso.md5 (MEGA)](https://mega.nz/file/zQsmVI6I#FXbmHofeTlP9OGbQKP95sSC6VOhRKBXmMAHIpkM1hmY)**
+> 📄 **[devuan-corbexos-20260615_2149.iso.md5 (MEGA)](https://mega.nz/file/WA0lmDDD#pGezT53T75oTEOvVag_yLCakZsDduaDk_JIKTK1nMlY)**
+>
+> ### ✨ Changelog (v3.2)
+> - **Antigravity Offline-First**: Instalación 100% hermética de la versión 1.23.2. Se eliminaron los warnings GPG de APT y se independizó de los repositorios de Google integrando un *fallback* seguro por GitHub Releases.
+> - **PSeInt Nativo**: PSeInt ahora se compila localmente como un paquete `.deb` real (`checkinstall`) para satisfacer y asegurar todas sus dependencias en lugar de forzar copias manuales.
+> - **Estabilidad UEFI (Zero Red-Screens)**: Refactorizado el sistema de dependencias de GRUB en el pool para evitar conflictos entre la arquitectura EFI (`amd64-efi`) y Legacy (`pc-i386`).
+> - **Sincronización Regional**: Reparado el bug de desincronización de reloj y locales en el entorno `chroot`; el sistema arranca nativo en zona horaria Argentina/Córdoba.
+> 
+> ---
+> *(Versiones Anteriores)*
+> - 📦 [devuan-corbexos-20260608_1516.iso (MEGA)](https://mega.nz/file/SQEU1IYI#l8PnY7Jumm89ayfV-nHnzrZJYG4quzi10zOxfyWnygE)
 
 Para quemarla en un pendrive:
 
