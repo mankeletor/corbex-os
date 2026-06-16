@@ -393,8 +393,23 @@ else
 fi
 
 # --- Antigravity ---
-# Google ha quitado/bloqueado los comandos para descargar mediante apt-get/curl.
-# El usuario debe proveer manualmente 'antigravity_*.deb' en la carpeta extras/antigravity/.
+# Google ha quitado la versión 1.x de sus servidores públicos.
+# Para mantener la reproducibilidad, descargamos el .deb alojado en GitHub Releases.
+AG_DEB="$EXTRAS_DIR/antigravity/antigravity_1.23.2-1776332190_amd64.deb"
+AG_URL="https://github.com/mankeletor/corbex-os/releases/download/assets/antigravity_1.23.2-1776332190_amd64.deb"
+
+if [ ! -s "$AG_DEB" ]; then
+    echo "   Descargando Antigravity 1.23.2 desde GitHub..."
+    wget --tries=3 --timeout=120 -O "$AG_DEB" "$AG_URL" || {
+        echo "⚠️ No se pudo descargar Antigravity desde GitHub. Si no subiste el asset, la ISO se compilará sin el IDE." >> "$WARN_LOG"
+        rm -f "$AG_DEB"
+    }
+    if [ -s "$AG_DEB" ]; then
+        echo "   ✅ Antigravity descargado ($(du -sh "$AG_DEB" | cut -f1))"
+    fi
+else
+    echo "   Antigravity ya en cache, reutilizando ✅"
+fi
 
 
 # --- Avidemux AppImage (self-contained, no Flatpak runtime needed) ---
