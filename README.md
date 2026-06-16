@@ -144,7 +144,7 @@ Si venís corto de tiempo o querés hacer deploy ya en el aula:
 >
 > ### ✨ Changelog (v3.2)
 > - **Antigravity Offline-First**: Instalación 100% hermética de la versión 1.23.2. Se eliminaron los warnings GPG de APT y se independizó de los repositorios de Google integrando un *fallback* seguro por GitHub Releases.
-> - **PSeInt Nativo**: PSeInt ahora se compila localmente como un paquete `.deb` real (`checkinstall`) para satisfacer y asegurar todas sus dependencias en lugar de forzar copias manuales.
+> - **PSeInt Nativo**: PSeInt ahora se compila localmente como un paquete `.deb` real (`dpkg-deb --build`) para satisfacer y asegurar todas sus dependencias en lugar de forzar copias manuales.
 > - **Estabilidad UEFI (Zero Red-Screens)**: Refactorizado el sistema de dependencias de GRUB en el pool para evitar conflictos entre la arquitectura EFI (`amd64-efi`) y Legacy (`pc-i386`).
 > - **Sincronización Regional**: Reparado el bug de desincronización de reloj y locales en el entorno `chroot`; el sistema arranca nativo en zona horaria Argentina/Córdoba.
 > 
