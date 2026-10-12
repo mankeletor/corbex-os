@@ -420,7 +420,9 @@ else
     flog "⚠️ Usuario alumno no existe"
 fi
 
-# --- 1.5 Esperar red y Generar sources.list dinámico ---
+# --- 1.5 Esperar red y actualizar desde sources.list pre-generado ---
+# El sources.list ya fue instalado por late_command y restaurado por postinst_final.sh.
+# Aquí solo esperamos red y hacemos apt-get update/upgrade si está disponible.
 flog "Esperando conexión a Internet (max 60s)..."
 NET_OK=false
 for i in {1..12}; do
@@ -432,19 +434,12 @@ for i in {1..12}; do
 done
 
 if [ "$NET_OK" = "true" ]; then
-    flog "Red detectada. Generando /etc/apt/sources.list dinámico..."
-    if [ -x "/usr/local/sbin/corbex-build-sources.sh" ]; then
-        if /usr/local/sbin/corbex-build-sources.sh "dev1mir.registrationsplus.net" > /tmp/sources.list.new 2>>"$FLOG"; then
-            mv /tmp/sources.list.new /etc/apt/sources.list
-            flog "sources.list generado exitosamente ✅"
-            apt-get update -qq 2>/dev/null || flog "⚠️ apt-get update falló luego de generar sources.list"
-        else
-            flog "⚠️ Falló la generación. Se reintentará en el próximo arranque."
-            exit 1
-        fi
-    else
-        flog "⚠️ Script corbex-build-sources.sh no encontrado o no ejecutable. Ignorando."
-    fi
+    flog "Red detectada. Actualizando lista de paquetes..."
+    apt-get update -qq 2>/dev/null || flog "⚠️ apt-get update falló"
+
+    # Actualizar paquetes si hay red (el SO queda actualizado al primer arranque)
+    flog "Aplicando actualizaciones disponibles..."
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y 2>/dev/null || flog "⚠️ apt-get upgrade falló o sin paquetes nuevos"
 else
     flog "⚠️ Sin conexión a internet tras 60s. Aplazando firstrun para el próximo reinicio..."
     exit 1

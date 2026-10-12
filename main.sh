@@ -68,6 +68,12 @@ run_module "02_extract_iso.sh"
 
 # Orden de Dependencia Crítico: 04 antes que 03 (Sincrónico)
 run_module "04_repo_local.sh" "$CLEAN_ARG"
+
+# Generar sources.list en build time (internet obligatorio en el host de build).
+# El firstrun del sistema instalado simplemente lo copia a /etc/apt/sources.list,
+# sin depender de discovery HTTP en la escuela.
+run_module "03_generate_sources.sh"
+
 run_module "03_build_initrd.sh"
 
 run_module "05_build_iso.sh"
