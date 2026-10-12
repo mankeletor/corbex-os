@@ -313,7 +313,7 @@ fi
 # El postinst los instala desde /root/extras/ dentro del chroot.
 # ─────────────────────────────────────────────
 EXTRAS_DIR="$ISO_HOME/extras"
-mkdir -p "$EXTRAS_DIR/antigravity"
+mkdir -p "$EXTRAS_DIR/vscode"
 
 # --- PSeInt ---
 PSEINT_VER="20250314"
@@ -392,23 +392,26 @@ else
     echo "   PSeInt ya empaquetado en pool/local, reutilizando ✅"
 fi
 
-# --- Antigravity ---
-# Google ha quitado la versión 1.x de sus servidores públicos.
-# Para mantener la reproducibilidad, descargamos el .deb alojado en GitHub Releases.
-AG_DEB="$EXTRAS_DIR/antigravity/antigravity_1.23.2-1776332190_amd64.deb"
-AG_URL="https://github.com/mankeletor/corbex-os/releases/download/assets/antigravity_1.23.2-1776332190_amd64.deb"
+# --- VSCode ---
+# Se descarga el .deb oficial de Microsoft desde la URL fijada en config.env.
+# Al instalarse vía dpkg agrega automáticamente su propio repo en
+# /etc/apt/sources.list.d/vscode.list → los alumnos reciben
+# actualizaciones automáticas con apt upgrade.
+VSCODE_DEB="$EXTRAS_DIR/vscode/vscode_amd64.deb"
 
-if [ ! -s "$AG_DEB" ]; then
-    echo "   Descargando Antigravity 1.23.2 desde GitHub..."
-    wget --tries=3 --timeout=120 -O "$AG_DEB" "$AG_URL" || {
-        echo "⚠️ No se pudo descargar Antigravity desde GitHub. Si no subiste el asset, la ISO se compilará sin el IDE." >> "$WARN_LOG"
-        rm -f "$AG_DEB"
+if [ ! -s "$VSCODE_DEB" ]; then
+    echo "   Descargando VSCode estable desde Microsoft..."
+    wget --tries=3 --timeout=120 \
+        -O "$VSCODE_DEB" \
+        "${VSCODE_URL}" || {
+        echo "⚠️ No se pudo descargar VSCode" >> "$WARN_LOG"
+        rm -f "$VSCODE_DEB"
     }
-    if [ -s "$AG_DEB" ]; then
-        echo "   ✅ Antigravity descargado ($(du -sh "$AG_DEB" | cut -f1))"
+    if [ -s "$VSCODE_DEB" ]; then
+        echo "   ✅ VSCode descargado ($(du -sh "$VSCODE_DEB" | cut -f1))"
     fi
 else
-    echo "   Antigravity ya en cache, reutilizando ✅"
+    echo "   VSCode ya en cache, reutilizando ✅"
 fi
 
 

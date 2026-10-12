@@ -150,7 +150,7 @@ fi
 #     ESTRATEGIA (3 capas):
 #       a) Solo deshabilitar gnome-keyring-secrets (el que pide contraseña).
 #          Dejar ssh y pkcs11 activos → el daemon sigue disponible para
-#          apps Electron como Antigravity y Chrome que usan libsecret.
+#          apps Electron como VSCode y Chrome que usan libsecret.
 #       b) Keyring vacío pre-creado para usuario alumno → desbloqueado
 #          desde el primer arranque sin intervención del usuario.
 #       c) NetworkManager configurado con backend "keyfile" → guarda
@@ -158,11 +158,11 @@ fi
 #          en vez de intentar usar el keyring (evita pérdida de redes
 #          guardadas en entornos de autologin).
 # ─────────────────────────────────────────────
-log "Configurando keyring para autologin + Antigravity + Chrome..."
+log "Configurando keyring para autologin + VSCode + Chrome..."
 
 # a) Deshabilitar SOLO el componente que dispara el diálogo de contraseña.
 #    gnome-keyring-ssh y gnome-keyring-pkcs11 se dejan habilitados
-#    para que el daemon quede disponible para libsecret (Antigravity, Chrome, etc.)
+#    para que el daemon quede disponible para libsecret (VSCode, Chrome, etc.)
 AUTOSTART_DIR="/etc/xdg/autostart"
 SECRETS_DESKTOP="${AUTOSTART_DIR}/gnome-keyring-secrets.desktop"
 if [ -f "$SECRETS_DESKTOP" ]; then
@@ -350,42 +350,20 @@ else
 fi
 
 # ─────────────────────────────────────────────
-# 13. Instalar Antigravity offline desde ISO
+# 13. Instalar VSCode offline desde ISO
 # ─────────────────────────────────────────────
-log "Instalando Antigravity offline..."
-AGDIR="/root/extras/antigravity"
-if ls "$AGDIR"/antigravity_*.deb 1>/dev/null 2>&1; then
-    mkdir -p /etc/apt/keyrings
-    cat > /etc/apt/keyrings/antigravity-repo-key.asc << 'GPG_KEY'
------BEGIN PGP PUBLIC KEY BLOCK-----
-
-xsBNBGCRt7MBCADkYJHHQQoL6tKrW/LbmfR9ljz7ib2aWno4JO3VKQvLwjyUMPpq
-/SXXMOnx8jXwgWizpPxQYDRJ0SQXS9ULJ1hXRL/OgMnZAYvYDeV2jBnKsAIEdiG/
-e1qm8P4W9qpWJc+hNq7FOT13RzGWRx57SdLWSXo0KeY38r9lvjjOmT/cuOcmjwlD
-T9XYf/RSO+yJ/AsyMdAr+ZbDeQUd9HYJiPdI04lGaGM02MjDMnx+monc+y54t+Z+
-ry1WtQdzoQt9dHlIPlV1tR+xV5DHHsejCZxu9TWzzSlL5wfBBeEz7R/OIzivGJpW
-QdJzd+2QDXSRg9q2XYWP5ZVtSgjVVJjNlb6ZABEBAAHNVEFydGlmYWN0IFJlZ2lz
-dHJ5IFJlcG9zaXRvcnkgU2lnbmVyIDxhcnRpZmFjdC1yZWdpc3RyeS1yZXBvc2l0
-b3J5LXNpZ25lckBnb29nbGUuY29tPsLAjgQTAQoAOBYhBDW6oLM+nrOW9ZyoOMC6
-XObcYxWjBQJgkbezAhsDBQsJCAcCBhUKCQgLAgQWAgMBAh4BAheAAAoJEMC6XObc
-YxWj+igIAMFh6DrAYMeq9sbZ1ZG6oAMrinUheGQbEqe76nIDQNsZnhDwZ2wWqgVC
-7DgOMqlhQmOmzm7M6Nzmq2dvPwq3xC2OeI9fQyzjT72deBTzLP7PJok9PJFOMdLf
-ILSsUnmMsheQt4DUO0jYAX2KUuWOIXXJaZ319QyoRNBPYa5qz7qXS7wHLOY89IDq
-fHt6Aud8ER5zhyOyhytcYMeaGC1g1IKWmgewnhEq02FantMJGlmmFi2eA0EPD02G
-C3742QGqRxLwjWsm5/TpyuU24EYKRGCRm7QdVIo3ugFSetKrn0byOxWGBvtu4fH8
-XWvZkRT+u+yzH1s5yFYBqc2JTrrJvRU=
-=QnvN
------END PGP PUBLIC KEY BLOCK-----
-GPG_KEY
-
-    DEBIAN_FRONTEND=noninteractive dpkg -i "$AGDIR"/antigravity_*.deb 2>/dev/null || \
-        apt-get -o APT::CDROM::NoMount=true install -f -y < /dev/null 2>/dev/null || true
-    echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.asc] \
-https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ \
-antigravity-debian main" > /etc/apt/sources.list.d/antigravity.list
-    log "Antigravity instalado ✅"
+log "Instalando VSCode offline..."
+VSCODE_DIR="/root/extras/vscode"
+if [ -f "$VSCODE_DIR/vscode_amd64.deb" ]; then
+    DEBIAN_FRONTEND=noninteractive dpkg -i "$VSCODE_DIR/vscode_amd64.deb" 2>/dev/null || \
+        apt-get -o APT::CDROM::NoMount=true install -f -y </dev/null 2>/dev/null || true
+    if dpkg -l code 2>/dev/null | grep -q "^ii"; then
+        log "VSCode instalado ✅"
+    else
+        log "⚠️ VSCode no pudo instalarse correctamente"
+    fi
 else
-    log "⚠️ Antigravity no encontrado en /root/extras/"
+    log "⚠️ VSCode no encontrado en /root/extras/vscode/"
 fi
 
 # Limpiar directorio extras — al final de TODAS las instalaciones
@@ -648,7 +626,57 @@ log "Actualizando menú de arranque..."
 update-grub < /dev/null
 
 # ─────────────────────────────────────────────
-# 18. Limpieza y Restauración de APT (Final)
+# 18. Identidad CorbexOS (os-release + lsb_release)
+# ─────────────────────────────────────────────
+log "Escribiendo identidad del sistema CorbexOS..."
+
+# Leer la fecha de build desde el archivo generado por 04_repo_local.sh
+# Ejemplo de contenido: "CorbexOS devuan-corbexos Build 2026-10-11 21:30"
+CORBEX_BUILD_FILE="/etc/corbex-version"
+# También revisar el nombre alternativo generado por el módulo 04
+if [ ! -f "$CORBEX_BUILD_FILE" ]; then
+    CORBEX_BUILD_FILE="/etc/corvex_version"
+fi
+
+if [ -f "$CORBEX_BUILD_FILE" ]; then
+    CORBEX_BUILD_DATE=$(grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' "$CORBEX_BUILD_FILE" | head -1)
+else
+    CORBEX_BUILD_DATE=$(date '+%Y-%m-%d')
+fi
+
+CORBEX_VERSION_ID="${CORBEX_BUILD_DATE}"
+CORBEX_PRETTY="CorbexOS ${CORBEX_BUILD_DATE}"
+
+# Escribir /etc/os-release (estándar systemd/LSB moderno)
+cat > /etc/os-release << OSRELEASE
+PRETTY_NAME="${CORBEX_PRETTY}"
+NAME="CorbexOS"
+VERSION_ID="${CORBEX_VERSION_ID}"
+VERSION="${CORBEX_BUILD_DATE} (Excalibur)"
+VERSION_CODENAME=excalibur
+ID=corbexos
+ID_LIKE=devuan
+HOME_URL="https://github.com/mankeletor/corbex-os"
+SUPPORT_URL="https://github.com/mankeletor/corbex-os/issues"
+BUG_REPORT_URL="https://github.com/mankeletor/corbex-os/issues"
+OSRELEASE
+
+# Escribir /etc/lsb-release (herramienta lsb_release)
+cat > /etc/lsb-release << LSBRELEASE
+DISTRIB_ID=CorbexOS
+DISTRIB_RELEASE=${CORBEX_VERSION_ID}
+DISTRIB_CODENAME=excalibur
+DISTRIB_DESCRIPTION="${CORBEX_PRETTY}"
+LSBRELEASE
+
+# Escribir /etc/corbex-version y /etc/corvex_version (legado)
+echo "${CORBEX_PRETTY}" > /etc/corbex-version
+echo "${CORBEX_PRETTY}" > /etc/corvex_version
+
+log "Identidad del sistema: ${CORBEX_PRETTY} ✅"
+
+# ─────────────────────────────────────────────
+# 19. Limpieza y Restauración de APT (Final)
 # ─────────────────────────────────────────────
 rm -f /etc/apt/apt.conf.d/99offline-install
 if [ -f /etc/apt/sources.list.offline ]; then
