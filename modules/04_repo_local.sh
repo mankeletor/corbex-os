@@ -98,6 +98,11 @@ EOF
 # Asegurar que el archivo status exista y esté vacío para una resolución limpia
 touch "$APT_SANDBOX/var/lib/apt/status"
 
+# Exportar APT_CONFIG antes de cualquier llamada a apt-get para aislar al sandbox
+del sistema anfitrión (evita que el host "sepa" paquetes instalados, p. ej. libwoff1)
+y cause red screen 87% por falta de dependencias en el repo offline.
+export APT_CONFIG="$APT_SANDBOX/apt.conf"
+
 echo "   Sincronizando índices de Devuan en el sandbox..."
 # Forzar actualización ignorando cualquier restricción de seguridad del host
 apt-get -c "$APT_SANDBOX/apt.conf" update -o APT::Get::AllowUnauthenticated=true -o Acquire::AllowInsecureRepositories=true -qq || true
