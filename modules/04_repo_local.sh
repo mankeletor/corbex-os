@@ -98,6 +98,11 @@ EOF
 # Asegurar que el archivo status exista y esté vacío para una resolución limpia
 touch "$APT_SANDBOX/var/lib/apt/status"
 
+# Exportar APT_CONFIG antes de cualquier llamada a apt-get para aislar al sandbox
+# del sistema anfitrión (evita que el host "sepa" paquetes instalados, p. ej. libwoff1)
+# y cause red screen 87% por falta de dependencias en el repo offline.
+export APT_CONFIG="$APT_SANDBOX/apt.conf"
+
 echo "   Sincronizando índices de Devuan en el sandbox..."
 # Forzar actualización ignorando cualquier restricción de seguridad del host
 apt-get -c "$APT_SANDBOX/apt.conf" update -o APT::Get::AllowUnauthenticated=true -o Acquire::AllowInsecureRepositories=true -qq || true
@@ -222,74 +227,97 @@ sed -i '/^$/d' "$BASE_DIR/pkgs_offline.txt"
 mkdir -p "$ISO_HOME/pool/local"
 mkdir -p "$ISO_HOME/dists/excalibur/local/binary-amd64"
 
-# 1. Identificar paquetes BASE
-echo "   Indexando base Netinstall para de-duplicación..."
+# 1. Descargar TODOS los paquetes resueltos directamente del mirror online.
+#
+# NOTA DE DISEÑO (fix pantalla roja 'Franken-repo'):
+# Antes se priorizaba Pool1.iso y se salteaban los paquetes presentes en la
+# netinstall base. Eso mezclaba versiones viejas (Pool1/base) con dependencias
+# resueltas contra el mirror online, generando conflictos imposibles como
+#   util-linux-locales (2.41.5) Depende util-linux (>= 2.41.5)
+#   pero util-linux 2.41-5devuan2 (viejo) iba a ser instalado
+# → pkgsel fallaba con error 100 → pantalla roja.
+#
+# Ahora: APT resuelve versiones contra el mirror y bajamos exactamente esas
+# versiones. Consistencia garantizada, sin mezcla de repositorios.
+
+echo "   Obteniendo URIs exactas resueltas por APT desde el mirror..."
+URI_FILE="$WORKDIR/package_uris.txt"
+apt-get -c "$APT_SANDBOX/apt.conf" --print-uris --reinstall -y install \
+    "${PAQUETES_SIMULACION[@]}" 2>/dev/null \
+    | grep "^'" | cut -d"'" -f2 > "$URI_FILE" || true
+
+URI_COUNT=$(wc -l < "$URI_FILE")
+if [ "$URI_COUNT" -eq 0 ]; then
+    echo "⚠️  APT no devolvió URIs. Abortando descarga de paquetes." | tee -a "$WARN_LOG"
+else
+    echo "   ✅ $URI_COUNT URIs obtenidas del mirror."
+fi
+
+# 2. Descarga en paralelo con cache persistente
+export ISO_HOME WARN_LOG PKG_CACHE URI_FILE
+fetch_uri() {
+    local uri="$1"
+    local fname
+    fname=$(basename "$uri")
+    # Evitar nombres con query string
+    fname="${fname%%\?*}"
+    # Decodificar percent-encoding de la URL (apt devuelve %2b por '+', %7e por '~')
+    # para que el nombre en disco coincida con el que APT buscará al instalar.
+    fname=$(printf '%b' "${fname//%/\\x}")
+
+    # 2a. ¿Ya está en pool/local? (idempotencia)
+    if [ -f "$ISO_HOME/pool/local/$fname" ]; then
+        return 0
+    fi
+
+    # 2b. ¿Ya está en el cache persistente? → copiar
+    if [ -f "$PKG_CACHE/$fname" ]; then
+        cp "$PKG_CACHE/$fname" "$ISO_HOME/pool/local/" 2>/dev/null && return 0
+    fi
+
+    # 2c. Descargar al cache y copiar
+    local count=0
+    while [ "$count" -le 2 ]; do
+        if wget -q --tries=2 --timeout=60 -O "$PKG_CACHE/$fname.part" "$uri" 2>/dev/null; then
+            mv "$PKG_CACHE/$fname.part" "$PKG_CACHE/$fname"
+            cp "$PKG_CACHE/$fname" "$ISO_HOME/pool/local/" 2>/dev/null
+            return 0
+        fi
+        rm -f "$PKG_CACHE/$fname.part"
+        ((count++))
+        sleep 1
+    done
+    echo "❌ No se pudo descargar: $fname ($uri)" >> "$WARN_LOG"
+    return 1
+}
+export -f fetch_uri
+
+echo "   Iniciando descarga paralela desde el mirror..."
+if [ -s "$URI_FILE" ]; then
+    xargs -I {} -P "$THREADS" bash -c 'fetch_uri "$@"' _ {} < "$URI_FILE"
+fi
+
+# 3. Marcar los paquetes de la netinstall base que NO se descargaron.
+#    Si un paquete sigue en la base y no fue descargado, el instalador lo toma
+#    de la netinstall; pero eso solo es seguro cuando la versión coincide.
+#    Los que sí descargamos quedan en pool/local y ganan por versión.
+echo "   Verificando cobertura base vs mirror..."
 BASE_PKGS_FILE="$WORKDIR/base_packages.txt"
 if [ -f "$ISO_HOME/dists/excalibur/main/binary-amd64/Packages" ]; then
     grep "^Package: " "$ISO_HOME/dists/excalibur/main/binary-amd64/Packages" | cut -d' ' -f2 | sort -u > "$BASE_PKGS_FILE"
 else
     touch "$BASE_PKGS_FILE"
 fi
-
-# 2. Extraer e Indexar Pool1
-EXTRACT_DIR="$WORKDIR/pool1_files"
-POOL1_INDEX="$WORKDIR/pool1_index.txt"
-echo "   Extrayendo Pool1.iso..."
-rm -rf "$EXTRACT_DIR" 2>/dev/null
-mkdir -p "$EXTRACT_DIR"
-xorriso -osirrox on -indev "$POOL1_ISO" -extract /pool "$EXTRACT_DIR" 2>/dev/null || { echo "❌ Error: Falló la extracción de $POOL1_ISO"; exit 1; }
-
-# Crear índice de búsqueda rápida
-find "$EXTRACT_DIR" -name "*.deb" -printf "%p\n" > "$POOL1_INDEX"
-DEB_COUNT=$(wc -l < "$POOL1_INDEX")
-echo "   ✅ Pool1 indexado ($DEB_COUNT paquetes)."
-
-# 3. Procesamiento Paralelo Optimizado
-export EXTRACT_DIR ISO_HOME BASE_PKGS_FILE POOL1_INDEX WARN_LOG APT_SANDBOX PKG_CACHE
-process_pkg() {
-    local pkg=$1
-    local retries=2
-    local count=0
-    
-    # 1. ¿Está en base? (Inmutabilidad estricta)
-    if grep -q "^${pkg}$" "$BASE_PKGS_FILE"; then return 0; fi
-
-    # 2. Buscar en índice de Pool1
-    local DEB_PATH=""
-    DEB_PATH=$(grep -m1 "/${pkg}_" "$POOL1_INDEX" || true)
-    
-    if [ -n "$DEB_PATH" ] && [ -f "$DEB_PATH" ]; then
-        cp "$DEB_PATH" "$ISO_HOME/pool/local/" || echo "❌ Error copiando $pkg desde Pool1" >> "$WARN_LOG"
-    else
-        # 3. Buscar en Cache persistente
-        local CACHED_DEB=""
-        CACHED_DEB=$(find "$PKG_CACHE" -maxdepth 1 -name "${pkg}_*.deb" -print -quit 2>/dev/null || true)
-        
-        if [ -n "$CACHED_DEB" ] && [ -f "$CACHED_DEB" ]; then
-            cp "$CACHED_DEB" "$ISO_HOME/pool/local/" || echo "❌ Error copiando $pkg desde Cache" >> "$WARN_LOG"
-        else
-            # 4. Descarga con Sandbox APT y Re-intento
-            while [ "$count" -le "$retries" ]; do
-                # Descargar a cache primero con flags de ultra-compatibilidad
-                if (cd "$PKG_CACHE" && apt-get -c "$APT_SANDBOX/apt.conf" download "$pkg" -o APT::Get::AllowUnauthenticated=true -o Acquire::AllowInsecureRepositories=true -qq 2>/dev/null); then
-                    local NEW_DEB
-                    NEW_DEB=$(ls -1t "$PKG_CACHE"/${pkg}_*.deb 2>/dev/null | head -n1 || true)
-                    if [ -n "$NEW_DEB" ]; then
-                        cp "$NEW_DEB" "$ISO_HOME/pool/local/"
-                        return 0
-                    fi
-                fi
-                ((count++))
-                [ "$count" -le "$retries" ] && sleep 1
-            done
-            echo "❌ No disponible tras $retries reintentos (Sandbox): $pkg" >> "$WARN_LOG"
-        fi
+# El nombre del paquete es lo que precede al primer '_' en el nombre del .deb
+PUBLICADOS_LOCAL=$(ls "$ISO_HOME/pool/local/"*.deb 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/_.*//' | sort -u)
+BASE_SIN_LOCAL=0
+while IFS= read -r bpkg; do
+    [ -z "$bpkg" ] && continue
+    if ! printf "%s\n" "$PUBLICADOS_LOCAL" | grep -qx "$bpkg"; then
+        BASE_SIN_LOCAL=$((BASE_SIN_LOCAL+1))
     fi
-}
-export -f process_pkg
-
-echo "   Iniciando copia/descarga paralela..."
-printf "%s\n" "${PAQUETES[@]}" | xargs -I {} -P "$THREADS" bash -c 'process_pkg "$@"' _ {}
+done < "$BASE_PKGS_FILE"
+echo "   ℹ️  Paquetes de la base netinstall no re-descargados: $BASE_SIN_LOCAL"
 
 # Verificación de paquetes críticos post-procesamiento
 # Nota: google-chrome-stable se descarga como extra, no via apt — no se verifica aquí
@@ -313,7 +341,7 @@ fi
 # El postinst los instala desde /root/extras/ dentro del chroot.
 # ─────────────────────────────────────────────
 EXTRAS_DIR="$ISO_HOME/extras"
-mkdir -p "$EXTRAS_DIR/antigravity"
+mkdir -p "$EXTRAS_DIR/vscode"
 
 # --- PSeInt ---
 PSEINT_VER="20250314"
@@ -392,23 +420,26 @@ else
     echo "   PSeInt ya empaquetado en pool/local, reutilizando ✅"
 fi
 
-# --- Antigravity ---
-# Google ha quitado la versión 1.x de sus servidores públicos.
-# Para mantener la reproducibilidad, descargamos el .deb alojado en GitHub Releases.
-AG_DEB="$EXTRAS_DIR/antigravity/antigravity_1.23.2-1776332190_amd64.deb"
-AG_URL="https://github.com/mankeletor/corbex-os/releases/download/assets/antigravity_1.23.2-1776332190_amd64.deb"
+# --- VSCode ---
+# Se descarga el .deb oficial de Microsoft desde la URL fijada en config.env.
+# Al instalarse vía dpkg agrega automáticamente su propio repo en
+# /etc/apt/sources.list.d/vscode.list → los alumnos reciben
+# actualizaciones automáticas con apt upgrade.
+VSCODE_DEB="$EXTRAS_DIR/vscode/vscode_amd64.deb"
 
-if [ ! -s "$AG_DEB" ]; then
-    echo "   Descargando Antigravity 1.23.2 desde GitHub..."
-    wget --tries=3 --timeout=120 -O "$AG_DEB" "$AG_URL" || {
-        echo "⚠️ No se pudo descargar Antigravity desde GitHub. Si no subiste el asset, la ISO se compilará sin el IDE." >> "$WARN_LOG"
-        rm -f "$AG_DEB"
+if [ ! -s "$VSCODE_DEB" ]; then
+    echo "   Descargando VSCode estable desde Microsoft..."
+    wget --tries=3 --timeout=120 \
+        -O "$VSCODE_DEB" \
+        "${VSCODE_URL}" || {
+        echo "⚠️ No se pudo descargar VSCode" >> "$WARN_LOG"
+        rm -f "$VSCODE_DEB"
     }
-    if [ -s "$AG_DEB" ]; then
-        echo "   ✅ Antigravity descargado ($(du -sh "$AG_DEB" | cut -f1))"
+    if [ -s "$VSCODE_DEB" ]; then
+        echo "   ✅ VSCode descargado ($(du -sh "$VSCODE_DEB" | cut -f1))"
     fi
 else
-    echo "   Antigravity ya en cache, reutilizando ✅"
+    echo "   VSCode ya en cache, reutilizando ✅"
 fi
 
 
@@ -493,6 +524,6 @@ echo "$BUILD_VERSION" > "$ISO_HOME/corbex-version"
 echo "$BUILD_VERSION" > "$ISO_HOME/corvex_version"
 echo "✅ Archivos de versión creados: $BUILD_VERSION"
 
-rm -rf "$EXTRACT_DIR" "$APT_SANDBOX"
+rm -rf "$APT_SANDBOX"
 [ "${TMPDIR_CREATED:-false}" = true ] && rm -rf "$TMP_DIR"
 echo "✅ Módulo 04 finalizado exitosamente."
