@@ -2074,7 +2074,6 @@ usb-modeswitch-data
 usbmuxd
 util-linux
 util-linux-extra
-util-linux-locales
 va-driver-all
 vdpau-driver-all
 vlc
