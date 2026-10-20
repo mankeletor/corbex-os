@@ -173,7 +173,7 @@ PAQUETES_SEMILLA+=("${PAQUETES_CRITICOS[@]}")
 PAQUETES_ADICIONALES_REPOS=(grub-pc grub-efi-amd64 grub-efi-amd64-signed grub-efi-amd64-unsigned)
 
 # Exportar la lista base (se actualizará tras la resolución)
-printf "%s\n" "${PAQUETES_SEMILLA[@]}" | grep -vE "^(grub-pc|grub-efi-amd64|grub-efi-amd64-signed|grub-efi-amd64-unsigned)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
+printf "%s\n" "${PAQUETES_SEMILLA[@]}" | grep -vE "^(grub-pc|grub-efi-amd64|grub-efi-amd64-signed|grub-efi-amd64-unsigned|util-linux-locales)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
 
 # 0.1 Resolución de Dependencias Recursivas (Cerebro v0.99rc27)
 echo "   Resolviendo dependencias recursivas mediante simulación APT..."
@@ -195,7 +195,7 @@ else
     # 0.1b REFINAMIENTO DE pkgs_install.txt: Usar la lista resuelta para el instalador
     # Esto asegura que d-i pkgsel sepa exactamente qué instalar offline.
     echo "   Refinando pkgs_install.txt con resolución de dependencias completa..."
-    printf "%s\n" "$PAQUETES_LISTA_COMPLETA" | grep -vE "^(grub-pc|grub-efi-amd64|grub-efi-amd64-signed|grub-efi-amd64-unsigned)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
+    printf "%s\n" "$PAQUETES_LISTA_COMPLETA" | grep -vE "^(grub-pc|grub-efi-amd64|grub-efi-amd64-signed|grub-efi-amd64-unsigned|util-linux-locales)$" | sort -u > "$BASE_DIR/pkgs_install.txt"
 fi
 
 # Añadir paquetes personalizados construidos en el script
