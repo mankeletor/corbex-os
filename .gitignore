@@ -39,14 +39,13 @@ pkgs_install.txt
 *.deb
 
 # --------------------
-# BACKUPS Y ARCHIVOS TEMPORALES
+# ARCHIVOS DE CONFIGURACIÓN (secretos o específicos del entorno)
 # --------------------
-*.bak
-*.orig
-*.tmp
-*.swp
-*.swo
-*~
+.env
+.env.*
+!.env.example
+.config.env
+config.env.local
 
 # --------------------
 # LOGS
