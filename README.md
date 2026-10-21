@@ -152,13 +152,19 @@ Si venís corto de tiempo o querés hacer deploy ya en el aula:
 > *(Versiones Anteriores)*
 > - 📦 [devuan-corbexos-20260608_1516.iso (MEGA)](https://mega.nz/file/SQEU1IYI#l8PnY7Jumm89ayfV-nHnzrZJYG4quzi10zOxfyWnygE)
 
-Para quemarla en un pendrive:
+Para quemarla en un pendrive de forma rápida, segura y guiada:
 
-*   **En Linux:**
+*   **Usando nuestro script interactivo con barra de progreso (`pv`):**
     ```bash
-    sudo dd if=corbex-os.iso of=/dev/sdX bs=4M status=progress oflag=sync
+    sudo ./flash-iso.sh
     ```
-    *(Cambiá `/dev/sdX` por tu USB. Un error acá y te borrás el disco de 1TB, ¡no digas que no te avisé!)* 
+    *(Detecta automáticamente la ISO, lista tus pendrives USB de forma interactiva y te previene contra accidentes en los discos del sistema).*
+
+*   **En Linux (método manual clásico con `dd`):**
+    ```bash
+    sudo dd if=ruta/a/corbex-os.iso of=/dev/sdX bs=4M status=progress oflag=sync
+    ```
+    *(Cambiá `/dev/sdX` por tu USB).* 
 
 *   **En Windows:**
     Usá **[Rufus](https://rufus.ie/)** en modo "DD" (si te pregunta) para asegurar la compatibilidad con el esquema de particionado híbrido.
