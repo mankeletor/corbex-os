@@ -138,18 +138,20 @@ El proceso de forjado toma entre 15 y 40 minutos dependiendo de tu ancho de band
 
 Si venís corto de tiempo o querés hacer deploy ya en el aula:
 
-> 🚀 **[devuan-corbexos-20260615_2149.iso (MEGA) - ÚLTIMA VERSIÓN](https://mega.nz/file/PJc0EYpR#oMtzinjlfUEXPf5w3K-AxQsEn0jJxQQOdxIyIyS5Lac)**
+> 🚀 **[devuan-corbexos-20261019_2223.iso (MEGA) - ÚLTIMA VERSIÓN v3.2](https://mega.nz/file/PJc0EYpR#oMtzinjlfUEXPf5w3K-AxQsEn0jJxQQOdxIyIyS5Lac)** *(mientras se genera el enlace nuevo, aquí está la versión anterior)*
 >
-> 📄 **[devuan-corbexos-20260615_2149.iso.md5 (MEGA)](https://mega.nz/file/WA0lmDDD#pGezT53T75oTEOvVag_yLCakZsDduaDk_JIKTK1nMlY)**
+> 📄 **[devuan-corbexos-20261019_2223.iso.md5 (MEGA)](https://mega.nz/file/WA0lmDDD#pGezT53T75oTEOvVag_yLCakZsDduaDk_JIKTK1nMlY)**
 >
-> ### ✨ Changelog (v3.2)
+> ### ✨ Changelog (v3.2) - 2026-10-19
 > - **Antigravity Offline-First**: Instalación 100% hermética de la versión 1.23.2. Se eliminaron los warnings GPG de APT y se independizó de los repositorios de Google integrando un *fallback* seguro por GitHub Releases.
 > - **PSeInt Nativo**: PSeInt ahora se compila localmente como un paquete `.deb` real (`dpkg-deb --build`) para satisfacer y asegurar todas sus dependencias en lugar de forzar copias manuales.
 > - **Estabilidad UEFI (Zero Red-Screens)**: Refactorizado el sistema de dependencias de GRUB en el pool para evitar conflictos entre la arquitectura EFI (`amd64-efi`) y Legacy (`pc-i386`).
 > - **Sincronización Regional**: Reparado el bug de desincronización de reloj y locales en el entorno `chroot`; el sistema arranca nativo en zona horaria Argentina/Córdoba.
-> 
+> - **Herramienta de Grabación de USB**: Nuevo script `flash-iso.sh` interactivo con barra de progreso `pv` para quemar ISOs en pendrives de forma segura.
+>
 > ---
 > *(Versiones Anteriores)*
+> - 📦 [devuan-corbexos-20260615_2149.iso (MEGA)](https://mega.nz/file/PJc0EYpR#oMtzinjlfUEXPf5w3K-AxQsEn0jJxQQOdxIyIyS5Lac)
 > - 📦 [devuan-corbexos-20260608_1516.iso (MEGA)](https://mega.nz/file/SQEU1IYI#l8PnY7Jumm89ayfV-nHnzrZJYG4quzi10zOxfyWnygE)
 
 Para quemarla en un pendrive de forma rápida, segura y guiada:
